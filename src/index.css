@@ -6,7 +6,7 @@
   }
 
   body {
-    @apply grid place-items-center min-w-[320px] min-h-screen relative m-0 bg-background text-foreground;
+    @apply min-w-[320px] min-h-screen relative m-0 bg-background text-foreground;
   }
 }
 
@@ -30,15 +30,6 @@ body::before {
   }
   to {
     background-position: 256px 224px;
-  }
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0);
-  }
-  to {
-    transform: rotate(360deg);
   }
 }
 
