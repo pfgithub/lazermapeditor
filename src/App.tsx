@@ -5,38 +5,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import "./index.css";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "./lib/utils";
+import { useAppStore, Map, Song, TimingSegment } from "./store";
 
-// Types
-type TimingSegment = {
-  id: string;
-  startTime: number;
-  bpm: number;
-};
+// Types are now in src/store.ts
 
-type Map = {
-  timing: TimingSegment[]; // sorted by start time
-};
-
-type Song = {
-  url: string;
-  name: string;
-};
-
-function MetadataTab({ song, setSong }: { song: Song | null; setSong: (song: Song | null) => void }) {
+function MetadataTab({ song, setSong }: { song: Song | null; setSong: (song: File | null) => void }) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const songInputRef = useRef<HTMLInputElement>(null);
 
   const handleSongChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Revoke old URL to prevent memory leaks
-      if (song?.url) {
-        URL.revokeObjectURL(song.url);
-      }
-      setSong({
-        url: URL.createObjectURL(file),
-        name: file.name,
-      });
+      setSong(file);
     }
   };
 
@@ -463,17 +443,33 @@ function DesignTab({ map, song }: { map: Map; song: Song | null }) {
 }
 
 export function App() {
-  const [map, setMap] = useState<Map>({ timing: [] });
-  const [song, setSong] = useState<Song | null>(null);
+  const { map, song, setMap, setSongFile, loadFromDb, isInitialized } = useAppStore();
 
-  // Clean up song object URL on unmount
   useEffect(() => {
-    return () => {
-      if (song?.url) {
-        URL.revokeObjectURL(song.url);
+    loadFromDb();
+  }, [loadFromDb]);
+
+  // Global cleanup for blob URL on app close/refresh
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const currentSong = useAppStore.getState().song;
+      if (currentSong?.url) {
+        URL.revokeObjectURL(currentSong.url);
       }
     };
-  }, [song]);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
+  if (!isInitialized) {
+    return (
+      <div className="w-screen h-screen flex items-center justify-center bg-background text-foreground">
+        <p>Loading project from database...</p>
+      </div>
+    );
+  }
 
   return (
     <main className="w-screen h-screen flex flex-col bg-background text-foreground">
@@ -484,7 +480,7 @@ export function App() {
           <TabsTrigger value="timing">Timing</TabsTrigger>
         </TabsList>
         <TabsContent value="metadata" className="flex-grow min-h-0 bg-card rounded-lg border">
-          <MetadataTab song={song} setSong={setSong} />
+          <MetadataTab song={song} setSong={setSongFile} />
         </TabsContent>
         <TabsContent value="design" className="flex-grow min-h-0">
           <DesignTab map={map} song={song} />
