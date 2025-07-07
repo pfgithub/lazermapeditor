@@ -10,8 +10,8 @@ function MetadataTab() {
   const songInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="p-6 max-w-2xl mx-auto border rounded-lg bg-card">
-      <form className="grid gap-6">
+    <div className="p-4 h-full overflow-y-auto">
+      <form className="grid gap-4 max-w-2xl mx-auto">
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="map-name" className="text-right">
             Map Name
@@ -61,7 +61,7 @@ function MetadataTab() {
 
 function CanvasTab() {
   return (
-    <div className="w-full h-full p-2">
+    <div className="w-full h-full">
       <canvas className="w-full h-full bg-card border rounded-lg"></canvas>
     </div>
   );
@@ -69,14 +69,14 @@ function CanvasTab() {
 
 export function App() {
   return (
-    <main className="w-screen h-screen flex flex-col p-4 bg-background text-foreground">
-      <Tabs defaultValue="metadata" className="w-full h-full flex flex-col">
+    <main className="w-screen h-screen flex flex-col bg-background text-foreground">
+      <Tabs defaultValue="metadata" className="w-full h-full flex flex-col p-2 gap-2">
         <TabsList className="mx-auto shrink-0">
           <TabsTrigger value="metadata">Metadata</TabsTrigger>
           <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="timing">Timing</TabsTrigger>
         </TabsList>
-        <TabsContent value="metadata" className="pt-4">
+        <TabsContent value="metadata" className="flex-grow min-h-0 bg-card rounded-lg border">
           <MetadataTab />
         </TabsContent>
         <TabsContent value="design" className="flex-grow min-h-0">
