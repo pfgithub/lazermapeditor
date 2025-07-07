@@ -25,10 +25,6 @@ interface DesignTabProps {
 export function DesignTab({ map, setMap, snap, setSnap, currentTime, seek }: DesignTabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const currentTimeRef = useRef(currentTime);
-  useEffect(() => {
-    currentTimeRef.current = currentTime;
-  }, [currentTime]);
 
   // Main drawing function, called every frame.
   const draw = useCallback(
@@ -124,7 +120,7 @@ export function DesignTab({ map, setMap, snap, setSnap, currentTime, seek }: Des
       // Prevent adding notes if user is typing in an input
       if (document.activeElement?.tagName === "INPUT") return;
 
-      const nearestTime = findNearestSnap(map, currentTimeRef.current, snap);
+      const nearestTime = findNearestSnap(map, currentTime, snap);
 
       if (nearestTime === null) return;
 
@@ -145,7 +141,7 @@ export function DesignTab({ map, setMap, snap, setSnap, currentTime, seek }: Des
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [map, setMap, snap]);
+  }, [map, setMap, snap, currentTime]);
 
   // Redraw canvas when time or drawing logic changes
   useEffect(() => {
