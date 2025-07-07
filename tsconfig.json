@@ -10,6 +10,9 @@
     "verbatimModuleSyntax": true,
     "noEmit": true,
 
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "target": "esnext",
+
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
