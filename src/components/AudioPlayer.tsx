@@ -1,37 +1,32 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import WaveSurfer from "wavesurfer.js";
 import { useAppStore } from "@/store";
 import { Button } from "./ui/button";
 import { PauseIcon, PlayIcon } from "lucide-react";
-import { Label } from "./ui/label";
+
+const formWaveSurferOptions = (ref: HTMLElement) => ({
+  container: ref,
+  waveColor: "hsl(var(--muted-foreground))",
+  progressColor: "hsl(var(--primary))",
+  cursorColor: "hsl(var(--foreground))",
+  barWidth: 2,
+  barRadius: 3,
+  responsive: true,
+  height: 80,
+  normalize: true,
+  partialRender: true,
+});
 
 export function AudioPlayer() {
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
   const { song, isPlaying, currentTime, setIsPlaying, setCurrentTime } = useAppStore();
   const subscribedCurrentTime = useAppStore((state) => state.currentTime);
-  const [zoom, setZoom] = useState(100);
-  const zoomLevels = [50, 100, 200, 400];
 
   useEffect(() => {
     if (!waveformRef.current) return;
 
-    const options = {
-      container: waveformRef.current,
-      waveColor: "hsl(var(--muted-foreground))",
-      progressColor: "hsl(var(--primary))",
-      cursorColor: "hsl(var(--foreground))",
-      barWidth: 2,
-      barRadius: 3,
-      responsive: false, // Required for scrollParent
-      height: 80,
-      normalize: true,
-      partialRender: true,
-      scrollParent: true,
-      autoCenter: true,
-      minPxPerSec: zoom,
-    };
-
+    const options = formWaveSurferOptions(waveformRef.current);
     const ws = WaveSurfer.create(options);
     wavesurfer.current = ws;
 
@@ -40,11 +35,7 @@ export function AudioPlayer() {
     }
 
     const onReady = () => {
-      const state = useAppStore.getState();
-      ws.setTime(state.currentTime);
-      if (state.isPlaying) {
-        ws.play();
-      }
+      // ready
     };
 
     const onPlay = () => setIsPlaying(true);
@@ -66,7 +57,7 @@ export function AudioPlayer() {
       ws.un("seek", onSeek);
       ws.destroy();
     };
-  }, [song?.url, setIsPlaying, setCurrentTime, zoom]);
+  }, [song?.url, setIsPlaying, setCurrentTime]);
 
   useEffect(() => {
     const ws = wavesurfer.current;
@@ -89,24 +80,14 @@ export function AudioPlayer() {
 
   return (
     <div className="w-full flex flex-col gap-2 bg-card p-2 border rounded-lg">
-      <div id="waveform" ref={waveformRef} className="w-full h-[80px] cursor-pointer overflow-x-hidden" />
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button onClick={handlePlayPause} size="icon" variant="outline">
-            {isPlaying ? <PauseIcon className="size-5" /> : <PlayIcon className="size-5" />}
-          </Button>
-          <p className="text-sm text-muted-foreground font-mono">
-            Time: {currentTime.toFixed(3)}s
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label>Zoom</Label>
-          {zoomLevels.map((level) => (
-            <Button key={level} variant={zoom === level ? "default" : "outline"} size="sm" onClick={() => setZoom(level)}>
-              {level}
-            </Button>
-          ))}
-        </div>
+      <div id="waveform" ref={waveformRef} className="w-full h-[80px] cursor-pointer" />
+      <div className="flex items-center gap-4">
+        <Button onClick={handlePlayPause} size="icon" variant="outline">
+          {isPlaying ? <PauseIcon className="size-5" /> : <PlayIcon className="size-5" />}
+        </Button>
+        <p className="text-sm text-muted-foreground font-mono">
+          Time: {currentTime.toFixed(3)}s
+        </p>
       </div>
     </div>
   );
