@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { Map } from "@/store";
@@ -25,63 +25,68 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
   const animationFrameId = useRef<number | undefined>(undefined);
 
   // Main drawing function, called every frame.
-  const draw = (time: number) => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
+  const draw = useCallback(
+    (time: number) => {
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) return;
 
-    const { width, height } = canvas.getBoundingClientRect();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const dpr = window.devicePixelRatio;
-    ctx.save();
-    ctx.scale(dpr, dpr);
+      const { width, height } = canvas.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
 
-    // --- Draw Columns for 4K ---
-    const numLanes = 4;
-    const laneWidth = width / numLanes;
-    ctx.strokeStyle = "hsl(var(--border))";
-    ctx.lineWidth = 1;
-    for (let i = 1; i < numLanes; i++) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const dpr = window.devicePixelRatio;
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      // --- Draw Columns for 4K ---
+      const numLanes = 4;
+      const laneWidth = width / numLanes;
+      ctx.strokeStyle = "hsl(var(--border))";
+      ctx.lineWidth = 1;
+      for (let i = 1; i < numLanes; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * laneWidth, 0);
+        ctx.lineTo(i * laneWidth, height);
+        ctx.stroke();
+      }
+
+      const startTime = time - 0.1;
+      const endTime = time + 1.0;
+
+      const posToY = (lineTime: number) => {
+        return height - ((lineTime - startTime) / (endTime - startTime)) * height;
+      };
+
+      const timingPoints = calculateTimingPointsInRange(map, startTime, endTime, snap);
+      for (const timingPoint of timingPoints) {
+        const pointSnap = getSnapForTime(map, timingPoint);
+        let strokeStyle = getColorForSnap(pointSnap);
+        let lineWidth = 1;
+
+        ctx.lineWidth = lineWidth;
+        ctx.strokeStyle = strokeStyle;
+
+        const y = posToY(timingPoint);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // --- Draw Judgement Line ---
+      ctx.strokeStyle = "hsl(var(--primary))";
+      ctx.lineWidth = 3;
+      const judgementY = posToY(time);
       ctx.beginPath();
-      ctx.moveTo(i * laneWidth, 0);
-      ctx.lineTo(i * laneWidth, height);
+      ctx.moveTo(0, judgementY);
+      ctx.lineTo(width, judgementY);
       ctx.stroke();
-    }
 
-    const startTime = time - 0.1;
-    const endTime = time + 1.0;
-
-    const posToY = (lineTime: number) => {
-      return height - ((lineTime - startTime) / (endTime - startTime)) * height;
-    };
-
-    const timingPoints = calculateTimingPointsInRange(map, startTime, endTime, snap);
-    for (const timingPoint of timingPoints) {
-      const pointSnap = getSnapForTime(map, timingPoint);
-      let strokeStyle = getColorForSnap(pointSnap);
-      let lineWidth = 1;
-
-      ctx.lineWidth = lineWidth;
-      ctx.strokeStyle = strokeStyle;
-
-      const y = posToY(timingPoint);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-
-    // --- Draw Judgement Line ---
-    ctx.strokeStyle = "hsl(var(--primary))";
-    ctx.lineWidth = 3;
-    const judgementY = posToY(time);
-    ctx.beginPath();
-    ctx.moveTo(0, judgementY);
-    ctx.lineTo(width, judgementY);
-    ctx.stroke();
-
-    ctx.restore();
-  };
+      ctx.restore();
+    },
+    [map, snap],
+  );
 
   // Animation loop using requestAnimationFrame
   useEffect(() => {
@@ -94,7 +99,7 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
     return () => {
       if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
     };
-  }, [map, snap, audioRef]); // Re-run if any of these change
+  }, [audioRef, draw]); // Re-run if any of these change
 
   // Handle canvas resizing
   useEffect(() => {
@@ -102,27 +107,37 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    const resizeObserver = new ResizeObserver(() => {
-      const { width, height } = container.getBoundingClientRect();
+    const performResize = () => {
+      const { width: containerWidth, height: containerHeight } = container.getBoundingClientRect();
+      if (containerWidth === 0 || containerHeight === 0) return;
+
       const dpr = window.devicePixelRatio;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+      const targetAspectRatio = 1 / 6;
+
+      let canvasWidth = containerWidth;
+      let canvasHeight = canvasWidth / targetAspectRatio;
+
+      if (canvasHeight > containerHeight) {
+        canvasHeight = containerHeight;
+        canvasWidth = canvasHeight * targetAspectRatio;
+      }
+
+      canvas.width = canvasWidth * dpr;
+      canvas.height = canvasHeight * dpr;
+      canvas.style.width = `${canvasWidth}px`;
+      canvas.style.height = `${canvasHeight}px`;
+
+      canvas.style.left = `${(containerWidth - canvasWidth) / 2}px`;
+      canvas.style.top = `${(containerHeight - canvasHeight) / 2}px`;
+
       draw(audioRef.current?.currentTime ?? 0);
-    });
+    };
+
+    const resizeObserver = new ResizeObserver(performResize);
     resizeObserver.observe(container);
 
-    // Initial resize
-    const { width, height } = container.getBoundingClientRect();
-    const dpr = window.devicePixelRatio;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-
     return () => resizeObserver.disconnect();
-  }, [audioRef]);
+  }, [audioRef, draw]);
 
   const handleWheel = (e: React.WheelEvent) => {
     if (!audioRef.current) return;
@@ -162,7 +177,7 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
         ref={containerRef}
         onWheel={handleWheel}
       >
-        <canvas ref={canvasRef} className="absolute top-0 left-0" />
+        <canvas ref={canvasRef} className="absolute" />
       </div>
     </div>
   );
