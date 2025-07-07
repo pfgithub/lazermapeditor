@@ -8,8 +8,14 @@ export type TimingSegment = {
   bpm: number;
 };
 
+export type Key = {
+  time: number;
+  key: 0 | 1 | 2 | 3;
+};
+
 export type Map = {
   timing: TimingSegment[]; // sorted by start time
+  keys: Key[]; // sorted by time
 };
 
 export type Song = {
@@ -27,7 +33,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
-  map: { timing: [] },
+  map: { timing: [], keys: [] },
   song: null,
   isInitialized: false,
 
@@ -62,6 +68,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const [mapData, songFile] = await Promise.all([getMap<Map>(), getSongFile()]);
       if (mapData) {
+        if (!mapData.keys) {
+          mapData.keys = [];
+        }
         set({ map: mapData });
       }
       if (songFile) {

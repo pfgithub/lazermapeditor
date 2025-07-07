@@ -1,9 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Map, TimingSegment } from "@/store";
+import { Key, Map, TimingSegment } from "@/store";
+import { findNearestSnap } from "@/lib/timingPoints";
 
 interface TimingTabProps {
   map: Map;
@@ -16,6 +17,46 @@ export function TimingTab({ map, setMap, songUrl, audioRef }: TimingTabProps) {
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
 
   const selectedSegment = map.timing.find((s) => s.id === selectedSegmentId);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
+        d: 0,
+        f: 1,
+        j: 2,
+        k: 3,
+      };
+
+      const keyIndex = keyMap[e.key.toLowerCase()];
+      if (keyIndex === undefined) return;
+
+      if (!audioRef.current) return;
+      // Prevent adding notes if user is typing in an input
+      if (document.activeElement?.tagName === "INPUT") return;
+
+      const currentTime = audioRef.current.currentTime;
+      const nearestTime = findNearestSnap(map, currentTime, 16);
+
+      if (nearestTime === null) return;
+
+      e.preventDefault();
+
+      const newKey: Key = { time: nearestTime, key: keyIndex };
+
+      // Avoid adding duplicate keys at the same time and column
+      if (map.keys.some((k) => k.time === newKey.time && k.key === newKey.key)) {
+        return;
+      }
+
+      const newKeys = [...map.keys, newKey].sort((a, b) => a.time - b.time);
+      setMap({ ...map, keys: newKeys });
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [map, setMap, audioRef]);
 
   const handleAddSegment = () => {
     const currentTime = audioRef.current?.currentTime ?? 0;

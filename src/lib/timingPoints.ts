@@ -41,6 +41,20 @@ export function findPreviousSnap(map: Map, time: number, snap: Snap): number | n
   return null;
 }
 
+export function findNearestSnap(map: Map, time: number, snap: Snap): number | null {
+  const next = findNextSnap(map, time, snap);
+  const prev = findPreviousSnap(map, time, snap);
+
+  if (next === null && prev === null) return null;
+  if (next === null) return prev;
+  if (prev === null) return next;
+
+  const diffNext = Math.abs(next - time);
+  const diffPrev = Math.abs(prev - time);
+
+  return diffNext <= diffPrev ? next : prev;
+}
+
 export type Snap = 1 | 2 | 4 | 8 | 16 | 3 | 6 | 12 | 24;
 export const snapLevels: Snap[] = [1, 2, 4, 8, 16, 3, 6, 12, 24];
 

@@ -74,6 +74,21 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
         ctx.stroke();
       }
 
+      // --- Draw Keys ---
+      ctx.strokeStyle = "hsl(var(--primary))";
+      ctx.lineWidth = 5;
+      for (const key of map.keys) {
+        if (key.time < startTime || key.time > endTime) {
+          continue;
+        }
+        const y = posToY(key.time);
+        const x_start = key.key * laneWidth;
+        ctx.beginPath();
+        ctx.moveTo(x_start, y);
+        ctx.lineTo(x_start + laneWidth, y);
+        ctx.stroke();
+      }
+
       // --- Draw Judgement Line ---
       ctx.strokeStyle = "hsl(var(--primary))";
       ctx.lineWidth = 3;
