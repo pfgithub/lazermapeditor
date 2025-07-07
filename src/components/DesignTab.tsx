@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Map, Song } from "@/store";
+import { WaveformDisplay } from "./WaveformDisplay";
 
 interface DesignTabProps {
   map: Map;
@@ -231,6 +232,10 @@ export function DesignTab({ map, song }: DesignTabProps) {
             </Button>
           ))}
         </div>
+      </div>
+
+      <div className="shrink-0 h-24">
+        <WaveformDisplay songUrl={song?.url} currentTime={currentTime} map={map} snap={snap} />
       </div>
 
       <div className="flex-grow relative bg-card border rounded-lg overflow-hidden" ref={containerRef} onWheel={handleWheel}>
