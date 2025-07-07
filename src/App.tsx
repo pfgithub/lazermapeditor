@@ -277,11 +277,7 @@ function DesignTab({ map, song }: { map: Map; song: Song | null }) {
     }
 
     const posToY = (lineTime: number) => {
-      if (isPlaying) {
-        return height - JUDGEMENT_LINE_Y_PLAYBACK - (lineTime - time) * PIXELS_PER_SECOND_PLAY;
-      } else {
-        return JUDGEMENT_LINE_Y_EDIT - (lineTime - time) * PIXELS_PER_SECOND_EDIT;
-      }
+      return height - JUDGEMENT_LINE_Y_PLAYBACK - (lineTime - time) * PIXELS_PER_SECOND_PLAY;
     };
 
     if (map.timing.length === 0 && getActiveTiming(time).bpm <= 0) return; // Don't draw lines if no timing info
@@ -356,7 +352,7 @@ function DesignTab({ map, song }: { map: Map; song: Song | null }) {
     // --- Draw Judgement Line ---
     ctx.strokeStyle = "hsl(var(--primary))";
     ctx.lineWidth = 3;
-    const judgementY = isPlaying ? height - JUDGEMENT_LINE_Y_PLAYBACK : JUDGEMENT_LINE_Y_EDIT;
+    const judgementY = height - JUDGEMENT_LINE_Y_PLAYBACK;
     ctx.beginPath();
     ctx.moveTo(0, judgementY);
     ctx.lineTo(width, judgementY);
