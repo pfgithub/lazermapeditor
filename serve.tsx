@@ -1,6 +1,7 @@
 import { serve } from "bun";
 import index from "./src/index.html";
 import { genViewerPrompt } from "prompt";
+import prompt from "./other/prompt.html";
 
 const server = serve({
   routes: {
@@ -12,6 +13,7 @@ const server = serve({
         'Content-Type': "text/plain",
       },
     }),
+    "/prompt": prompt,
   },
 
   development: process.env.NODE_ENV !== "production" && {
