@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Map, Song } from "@/store";
+import type { Map, Song } from "@/store";
 import { WaveformDisplay } from "./WaveformDisplay";
+import { calculateTimingPointsInRange, getColorForSnap, getSnapForTime, snapLevels, type Snap } from "@/lib/timingPoints";
 
 interface DesignTabProps {
   map: Map;
@@ -10,8 +11,7 @@ interface DesignTabProps {
 }
 
 export function DesignTab({ map, song }: DesignTabProps) {
-  const [snap, setSnap] = useState<number>(4);
-  const snapLevels = [1, 2, 4, 8, 16];
+  const [snap, setSnap] = useState<Snap>(4);
 
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -20,9 +20,6 @@ export function DesignTab({ map, song }: DesignTabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameId = useRef<number>();
-
-  const PIXELS_PER_SECOND_PLAY = 800; // Scroll speed during playback
-  const JUDGEMENT_LINE_Y_PLAYBACK = 50; // Y position of judgement line from bottom during playback
 
   // Gets the active timing segment for a given time.
   // Returns a default if no timing points are set.
@@ -41,7 +38,6 @@ export function DesignTab({ map, song }: DesignTabProps) {
     const beatDuration = 60 / activeSegment.bpm;
     const snapDuration = beatDuration * (4 / division);
 
-    // This logic correctly calculates the snap based on the active segment's grid.
     const relativeTime = time - activeSegment.startTime;
     const numSnaps = relativeTime / snapDuration;
 
@@ -74,83 +70,33 @@ export function DesignTab({ map, song }: DesignTabProps) {
       ctx.stroke();
     }
 
+    const startTime = time - 0.1;
+    const endTime = time + 1.0;
+
     const posToY = (lineTime: number) => {
-      return height - JUDGEMENT_LINE_Y_PLAYBACK - (lineTime - time) * PIXELS_PER_SECOND_PLAY;
+      return height - (lineTime - startTime) / (endTime - startTime) * height;
     };
 
-    if (map.timing.length === 0 && getActiveTiming(time).bpm <= 0) return; // Don't draw lines if no timing info
+    const timingPoints = calculateTimingPointsInRange(map, startTime, endTime, snap);
+    for(const timingPoint of timingPoints) {
+      const pointSnap = getSnapForTime(map, timingPoint);
+      let strokeStyle = getColorForSnap(pointSnap);
+      let lineWidth = 1;
 
-    // Helper to draw lines in one direction (past or future)
-    const drawLines = (startAt: number, direction: "next" | "prev") => {
-      let currentLineTime = startAt;
-      for (let i = 0; i < 200; i++) {
-        // Limit to 200 lines to prevent infinite loops
-        const y = posToY(currentLineTime);
+      ctx.lineWidth = lineWidth;
+      ctx.strokeStyle = strokeStyle;
 
-        // Stop drawing if lines are way off-screen
-        if (y < -20 || y > height + 20) {
-          if (i === 0) {
-            currentLineTime = getSnapTime(currentLineTime, direction, 16); // Ensure we eventually get on screen
-            continue;
-          } else {
-            break;
-          }
-        }
-
-        const { bpm, startTime } = getActiveTiming(currentLineTime);
-        if (bpm > 0) {
-          const beatDuration = 60 / bpm;
-          const relativeTime = currentLineTime - startTime;
-
-          const isNth = (n: number) => {
-            const divisionDuration = (beatDuration * 4) / n;
-            if (divisionDuration < 0.001) return false;
-            const numDivisions = relativeTime / divisionDuration;
-            return Math.abs(numDivisions - Math.round(numDivisions)) < 0.001;
-          };
-
-          let strokeStyle = "";
-          let lineWidth = 1;
-
-          if (isNth(1)) {
-            strokeStyle = "black";
-            lineWidth = 1.5;
-          } else if (isNth(2)) {
-            strokeStyle = "red";
-            lineWidth = 1.25;
-          } else if (isNth(4)) {
-            strokeStyle = "lightblue";
-            lineWidth = 1;
-          } else if (isNth(8)) {
-            strokeStyle = "yellow";
-            lineWidth = 0.75;
-          } else if (isNth(16)) {
-            strokeStyle = "orange";
-            lineWidth = 0.5;
-          }
-
-          if (strokeStyle) {
-            ctx.lineWidth = lineWidth;
-            ctx.strokeStyle = strokeStyle;
-
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(width, y);
-            ctx.stroke();
-          }
-        }
-
-        currentLineTime = getSnapTime(currentLineTime, direction, 16);
-      }
-    };
-
-    drawLines(getSnapTime(time - 0.001, "next", 16), "next");
-    drawLines(time, "prev"); // Start from current time to draw past lines
+      const y = posToY(timingPoint);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
 
     // --- Draw Judgement Line ---
     ctx.strokeStyle = "hsl(var(--primary))";
     ctx.lineWidth = 3;
-    const judgementY = height - JUDGEMENT_LINE_Y_PLAYBACK;
+    const judgementY = posToY(time);
     ctx.beginPath();
     ctx.moveTo(0, judgementY);
     ctx.lineTo(width, judgementY);
@@ -173,7 +119,7 @@ export function DesignTab({ map, song }: DesignTabProps) {
     return () => {
       if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
     };
-  }, [isPlaying, map, currentTime]); // Re-run if any of these change
+  }, [isPlaying, map, currentTime, snap]); // Re-run if any of these change
 
   // Handle canvas resizing
   useEffect(() => {
