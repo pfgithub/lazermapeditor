@@ -16,15 +16,15 @@ import {
 interface DesignTabProps {
   map: Map;
   setMap: (map: Map) => void;
+  audioRef: React.RefObject<HTMLAudioElement>;
   snap: Snap;
   setSnap: (snap: Snap) => void;
-  currentTime: number;
-  seek: (time: number) => void;
 }
 
-export function DesignTab({ map, setMap, snap, setSnap, currentTime, seek }: DesignTabProps) {
+export function DesignTab({ map, setMap, audioRef, snap, setSnap }: DesignTabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const animationFrameId = useRef<number | undefined>(undefined);
 
   // Main drawing function, called every frame.
   const draw = useCallback(
@@ -104,7 +104,7 @@ export function DesignTab({ map, setMap, snap, setSnap, currentTime, seek }: Des
     },
     [map, snap],
   );
-
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
@@ -117,9 +117,11 @@ export function DesignTab({ map, setMap, snap, setSnap, currentTime, seek }: Des
       const keyIndex = keyMap[e.key.toLowerCase()];
       if (keyIndex === undefined) return;
 
+      if (!audioRef.current) return;
       // Prevent adding notes if user is typing in an input
       if (document.activeElement?.tagName === "INPUT") return;
 
+      const currentTime = audioRef.current.currentTime;
       const nearestTime = findNearestSnap(map, currentTime, snap);
 
       if (nearestTime === null) return;
@@ -141,12 +143,21 @@ export function DesignTab({ map, setMap, snap, setSnap, currentTime, seek }: Des
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [map, setMap, snap, currentTime]);
+  }, [map, setMap, audioRef]);
+  
 
-  // Redraw canvas when time or drawing logic changes
+  // Animation loop using requestAnimationFrame
   useEffect(() => {
-    draw(currentTime);
-  }, [currentTime, draw]);
+    const loop = () => {
+      const time = audioRef.current?.currentTime ?? 0;
+      draw(time);
+      animationFrameId.current = requestAnimationFrame(loop);
+    };
+    animationFrameId.current = requestAnimationFrame(loop);
+    return () => {
+      if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+    };
+  }, [audioRef, draw]); // Re-run if any of these change
 
   // Handle canvas resizing
   useEffect(() => {
@@ -177,18 +188,20 @@ export function DesignTab({ map, setMap, snap, setSnap, currentTime, seek }: Des
       canvas.style.left = `${(containerWidth - canvasWidth) / 2}px`;
       canvas.style.top = `${(containerHeight - canvasHeight) / 2}px`;
 
-      draw(currentTime);
+      draw(audioRef.current?.currentTime ?? 0);
     };
 
     const resizeObserver = new ResizeObserver(performResize);
     resizeObserver.observe(container);
 
     return () => resizeObserver.disconnect();
-  }, [draw, currentTime]);
+  }, [audioRef, draw]);
 
   const handleWheel = (e: React.WheelEvent) => {
+    if (!audioRef.current) return;
     e.preventDefault();
 
+    const currentTime = audioRef.current.currentTime;
     let nextTime: number | null = null;
 
     if (e.deltaY > 0) {
@@ -200,7 +213,7 @@ export function DesignTab({ map, setMap, snap, setSnap, currentTime, seek }: Des
     }
 
     if (nextTime !== null) {
-      seek(nextTime);
+      audioRef.current.currentTime = nextTime;
     }
   };
 
