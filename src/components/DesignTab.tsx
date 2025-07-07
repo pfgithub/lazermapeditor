@@ -112,7 +112,7 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
       if (containerWidth === 0 || containerHeight === 0) return;
 
       const dpr = window.devicePixelRatio;
-      const targetAspectRatio = 1 / 6;
+      const targetAspectRatio = 9 / 16;
 
       let canvasWidth = containerWidth;
       let canvasHeight = canvasWidth / targetAspectRatio;
