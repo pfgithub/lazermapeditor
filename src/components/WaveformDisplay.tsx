@@ -11,7 +11,7 @@ interface WaveformDisplayProps {
   songUrl: string | null | undefined;
   currentTime: number;
   map: Map;
-  snap: number;
+  snap: Snap;
 }
 
 const DURATION_S = 3; // How many seconds of waveform to show
@@ -22,54 +22,27 @@ const drawSnapMarkers = (
   height: number,
   viewStartTime: number,
   map: Map,
-  snap: number,
+  snap: Snap,
 ) => {
   const viewEndTime = viewStartTime + DURATION_S;
   const timeToX = (lineTime: number) => ((lineTime - viewStartTime) / DURATION_S) * width;
 
-  // Generate points for both binary (1/16) and ternary (1/24) divisions to cover all snaps.
-  const binaryPoints = calculateTimingPointsInRange(map, viewStartTime, viewEndTime, 4 as Snap); // 1/16 notes
-  const tripletPoints = calculateTimingPointsInRange(map, viewStartTime, viewEndTime, 6 as Snap); // 1/24 notes
-  const timingPoints = Array.from(new Set([...binaryPoints, ...tripletPoints])).sort();
+  const timingPoints = calculateTimingPointsInRange(map, viewStartTime, viewEndTime, snap);
 
   for (const time of timingPoints) {
     const pointSnap = getSnapForTime(map, time);
-    if (!pointSnap) {
-      continue;
-    }
-
-    // Convert beat-based snap from getSnapForTime to whole-note-based snap divisor
-    // A whole note has 4 beats, so the divisor is 4x the beat division.
-    const divisor = pointSnap * 4;
-    if (divisor > snap) {
-      continue; // Filter out snaps finer than the selected one
-    }
-
     const strokeStyle = getColorForSnap(pointSnap);
     let lineWidth = 1;
 
-    // Make coarser snaps thicker for better visibility, similar to original implementation.
-    // In getSnapForTime: 1=beat, 2=1/8, 4=1/16...
-    if (pointSnap === 1) {
-      // This is a beat (1/4 note). The new `getSnapForTime` can't distinguish
-      // it from half or whole notes, so they will all share this style.
-      lineWidth = 1.5;
-    } else if (pointSnap > 2) {
-      // Finer snaps like 1/16, 1/24 etc.
-      lineWidth = 0.75;
-    }
-
-    if (strokeStyle) {
-      ctx.save();
-      ctx.strokeStyle = strokeStyle;
-      ctx.lineWidth = lineWidth;
-      const x = timeToX(time);
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-      ctx.restore();
-    }
+    ctx.save();
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = lineWidth;
+    const x = timeToX(time);
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+    ctx.restore();
   }
 };
 
