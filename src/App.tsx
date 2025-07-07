@@ -91,7 +91,7 @@ export function App() {
           <MetadataTab song={song} setSong={setSongFile} />
         </TabsContent>
         <TabsContent value="design" className="flex-grow min-h-0">
-          <DesignTab map={map} audioRef={audioRef} snap={designSnap} setSnap={setDesignSnap} />
+          <DesignTab map={map} setMap={setMap} audioRef={audioRef} snap={designSnap} setSnap={setDesignSnap} />
         </TabsContent>
         <TabsContent value="timing" className="flex-grow min-h-0 bg-card rounded-lg border">
           <TimingTab map={map} setMap={setMap} audioRef={audioRef} songUrl={song?.url ?? null} />

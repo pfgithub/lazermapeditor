@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { Map } from "@/store";
+import type { Key, Map } from "@/store";
 import {
   calculateTimingPointsInRange,
+  findNearestSnap,
   findNextSnap,
   findPreviousSnap,
   getColorForSnap,
@@ -14,12 +15,13 @@ import {
 
 interface DesignTabProps {
   map: Map;
+  setMap: (map: Map) => void;
   audioRef: React.RefObject<HTMLAudioElement>;
   snap: Snap;
   setSnap: (snap: Snap) => void;
 }
 
-export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
+export function DesignTab({ map, setMap, audioRef, snap, setSnap }: DesignTabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameId = useRef<number | undefined>(undefined);
@@ -75,22 +77,22 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
       }
 
       // --- Draw Keys ---
-      ctx.strokeStyle = "hsl(var(--primary))";
-      ctx.lineWidth = 5;
+      ctx.lineWidth = 8;
       for (const key of map.keys) {
         if (key.time < startTime || key.time > endTime) {
           continue;
         }
         const y = posToY(key.time);
         const x_start = key.key * laneWidth;
+        ctx.strokeStyle = getColorForSnap(getSnapForTime(map, key.time));
         ctx.beginPath();
-        ctx.moveTo(x_start, y);
-        ctx.lineTo(x_start + laneWidth, y);
+        ctx.moveTo(x_start + 5, y);
+        ctx.lineTo(x_start + laneWidth - 5, y);
         ctx.stroke();
       }
 
       // --- Draw Judgement Line ---
-      ctx.strokeStyle = "hsl(var(--primary))";
+      ctx.strokeStyle = getColorForSnap(getSnapForTime(map, time));
       ctx.lineWidth = 3;
       const judgementY = posToY(time);
       ctx.beginPath();
@@ -102,6 +104,47 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
     },
     [map, snap],
   );
+  
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
+        d: 0,
+        f: 1,
+        j: 2,
+        k: 3,
+      };
+
+      const keyIndex = keyMap[e.key.toLowerCase()];
+      if (keyIndex === undefined) return;
+
+      if (!audioRef.current) return;
+      // Prevent adding notes if user is typing in an input
+      if (document.activeElement?.tagName === "INPUT") return;
+
+      const currentTime = audioRef.current.currentTime;
+      const nearestTime = findNearestSnap(map, currentTime, snap);
+
+      if (nearestTime === null) return;
+
+      e.preventDefault();
+
+      const newKey: Key = { time: nearestTime, key: keyIndex };
+
+      // Avoid adding duplicate keys at the same time and column
+      if (map.keys.some((k) => k.time === newKey.time && k.key === newKey.key)) {
+        return;
+      }
+
+      const newKeys = [...map.keys, newKey].sort((a, b) => a.time - b.time);
+      setMap({ ...map, keys: newKeys });
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [map, setMap, audioRef]);
+  
 
   // Animation loop using requestAnimationFrame
   useEffect(() => {

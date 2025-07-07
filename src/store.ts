@@ -68,9 +68,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const [mapData, songFile] = await Promise.all([getMap<Map>(), getSongFile()]);
       if (mapData) {
-        if (!mapData.keys) {
-          mapData.keys = [];
-        }
         set({ map: mapData });
       }
       if (songFile) {

@@ -36,23 +36,20 @@ export function findNextSnap(map: Map, time: number, snap: Snap): number | null 
 
 export function findPreviousSnap(map: Map, time: number, snap: Snap): number | null {
   // A small epsilon to avoid getting the current time back
-  const points = calculateTimingPointsInRange(map, Math.max(0, time - 10), time - 0.00001, snap);
+  const points = calculateTimingPointsInRange(map, time - 10, time - 0.00001, snap);
   if (points.length > 0) return points[points.length - 1];
   return null;
 }
 
 export function findNearestSnap(map: Map, time: number, snap: Snap): number | null {
-  const next = findNextSnap(map, time, snap);
-  const prev = findPreviousSnap(map, time, snap);
-
-  if (next === null && prev === null) return null;
-  if (next === null) return prev;
-  if (prev === null) return next;
-
-  const diffNext = Math.abs(next - time);
-  const diffPrev = Math.abs(prev - time);
-
-  return diffNext <= diffPrev ? next : prev;
+  const points = calculateTimingPointsInRange(map, time - 10, time + 10, snap);
+  let nearest: number | null = null;
+  for(const point of points) {
+    if(nearest == null || Math.abs(point - time) < Math.abs(nearest - time)) {
+      nearest = point;
+    }
+  }
+  return nearest;
 }
 
 export type Snap = 1 | 2 | 4 | 8 | 16 | 3 | 6 | 12 | 24;
