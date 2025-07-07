@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { Map } from "@/store";
 import {
   calculateTimingPointsInRange,
@@ -8,7 +8,7 @@ import {
 } from "@/lib/timingPoints";
 
 interface WaveformDisplayProps {
-  songUrl: string | null | undefined;
+  audioBuffer: AudioBuffer | null;
   currentTime: number;
   map: Map;
   snap: Snap;
@@ -95,44 +95,9 @@ const drawWaveform = (
   }
 };
 
-export function WaveformDisplay({ songUrl, currentTime, map, snap }: WaveformDisplayProps) {
+export function WaveformDisplay({ audioBuffer, currentTime, map, snap }: WaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!songUrl) {
-      setAudioBuffer(null);
-      setError(null);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    const audioContext = new AudioContext();
-
-    fetch(songUrl)
-      .then((response) => response.arrayBuffer())
-      .then((arrayBuffer) => audioContext.decodeAudioData(arrayBuffer))
-      .then((decodedData) => {
-        setAudioBuffer(decodedData);
-      })
-      .catch((err) => {
-        console.error("Error decoding audio data:", err);
-        setError("Could not decode audio file.");
-        setAudioBuffer(null);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-
-    return () => {
-      audioContext.close().catch((e) => console.error("Error closing AudioContext", e));
-      setAudioBuffer(null);
-    };
-  }, [songUrl]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -147,8 +112,16 @@ export function WaveformDisplay({ songUrl, currentTime, map, snap }: WaveformDis
       return;
     }
 
-    drawWaveform(ctx, width, height, audioBuffer, currentTime);
-    drawSnapMarkers(ctx, width, height, currentTime, map, snap);
+    // The waveform is drawn relative to the current time, so the playhead is always centered
+    const viewStartTime = currentTime - DURATION_S / 2;
+    drawWaveform(ctx, width, height, audioBuffer, viewStartTime);
+    drawSnapMarkers(ctx, width, height, viewStartTime, map, snap);
+
+    // Draw playhead in the middle
+    ctx.save();
+    ctx.fillStyle = "hsl(var(--destructive))";
+    ctx.fillRect(width / 2 - 1, 0, 2, height);
+    ctx.restore();
   }, [audioBuffer, map, snap, currentTime]);
 
   useEffect(() => {
@@ -191,9 +164,7 @@ export function WaveformDisplay({ songUrl, currentTime, map, snap }: WaveformDis
     <div ref={containerRef} className="w-full h-full relative bg-muted/50 rounded-lg overflow-hidden border">
       <canvas ref={canvasRef} className="absolute top-0 left-0" />
       <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm p-4 text-center pointer-events-none">
-        {isLoading && <p>Loading waveform...</p>}
-        {error && <p>{error}</p>}
-        {!isLoading && !error && !songUrl && <p>Load a song in the Metadata tab to see the waveform.</p>}
+        {!audioBuffer && <p>Load a song in the Metadata tab to see the waveform.</p>}
       </div>
     </div>
   );

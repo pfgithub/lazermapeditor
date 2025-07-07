@@ -9,16 +9,15 @@ interface TimingTabProps {
   map: Map;
   setMap: (map: Map) => void;
   songUrl: string | null;
-  audioRef: React.RefObject<HTMLAudioElement>;
+  currentTime: number;
 }
 
-export function TimingTab({ map, setMap, songUrl, audioRef }: TimingTabProps) {
+export function TimingTab({ map, setMap, songUrl, currentTime }: TimingTabProps) {
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
 
   const selectedSegment = map.timing.find((s) => s.id === selectedSegmentId);
 
   const handleAddSegment = () => {
-    const currentTime = audioRef.current?.currentTime ?? 0;
     const newSegment: TimingSegment = {
       id: crypto.randomUUID(),
       startTime: currentTime,
