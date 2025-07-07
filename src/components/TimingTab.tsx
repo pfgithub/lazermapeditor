@@ -1,24 +1,23 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Map, TimingSegment } from "@/store";
+import { useAppStore } from "@/store";
 
 interface TimingTabProps {
   map: Map;
   setMap: (map: Map) => void;
-  songUrl: string | null;
 }
 
-export function TimingTab({ map, setMap, songUrl }: TimingTabProps) {
-  const audioRef = useRef<HTMLAudioElement>(null);
+export function TimingTab({ map, setMap }: TimingTabProps) {
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
+  const { currentTime, song } = useAppStore();
 
   const selectedSegment = map.timing.find((s) => s.id === selectedSegmentId);
 
   const handleAddSegment = () => {
-    const currentTime = audioRef.current?.currentTime ?? 0;
     const newSegment: TimingSegment = {
       id: crypto.randomUUID(),
       startTime: currentTime,
@@ -55,18 +54,15 @@ export function TimingTab({ map, setMap, songUrl }: TimingTabProps) {
   return (
     <div className="flex flex-row h-full">
       <div className="flex-grow flex flex-col gap-4 p-4">
-        {/* Top section: Player and Add button */}
+        {/* Top section: Add button */}
         <div className="flex flex-col gap-2">
-          {songUrl ? (
-            <audio ref={audioRef} key={songUrl} src={songUrl} controls className="w-full" />
+          {song ? (
+            <Button onClick={handleAddSegment}>Add Timing Segment at Current Time ({currentTime.toFixed(3)}s)</Button>
           ) : (
-            <div className="text-center text-muted-foreground p-4 bg-muted rounded-md h-[54px] flex items-center justify-center">
+            <div className="text-center text-muted-foreground p-4 bg-muted rounded-md h-[40px] flex items-center justify-center">
               Please select a song in the Metadata tab.
             </div>
           )}
-          <Button onClick={handleAddSegment} disabled={!songUrl}>
-            Add Timing Segment at Current Time
-          </Button>
         </div>
 
         {/* List of segments */}

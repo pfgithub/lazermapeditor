@@ -21,15 +21,21 @@ interface AppState {
   map: Map;
   song: Song | null;
   isInitialized: boolean;
+  isPlaying: boolean;
+  currentTime: number;
   setMap: (map: Map) => void;
   setSongFile: (songFile: File | null) => void;
   loadFromDb: () => Promise<void>;
+  setIsPlaying: (playing: boolean) => void;
+  setCurrentTime: (time: number) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   map: { timing: [] },
   song: null,
   isInitialized: false,
+  isPlaying: false,
+  currentTime: 0,
 
   setMap: (newMap) => {
     set({ map: newMap });
@@ -44,15 +50,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     if (songFile) {
+      // Reset time when a new song is loaded
       set({
         song: {
           url: URL.createObjectURL(songFile),
           name: songFile.name,
         },
+        currentTime: 0,
+        isPlaying: false,
       });
       saveSongFile(songFile).catch((err) => console.error("Failed to save song", err));
     } else {
-      set({ song: null });
+      set({ song: null, currentTime: 0, isPlaying: false });
       clearSongFile().catch((err) => console.error("Failed to clear song", err));
     }
   },
@@ -74,4 +83,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ isInitialized: true });
     }
   },
+
+  setIsPlaying: (playing) => set({ isPlaying: playing }),
+  setCurrentTime: (time) => set({ currentTime: time }),
 }));

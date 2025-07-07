@@ -1,21 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Map, Song } from "@/store";
+import { Map } from "@/store";
+import { useAppStore } from "@/store";
 
 interface DesignTabProps {
   map: Map;
-  song: Song | null;
 }
 
-export function DesignTab({ map, song }: DesignTabProps) {
+export function DesignTab({ map }: DesignTabProps) {
   const [snap, setSnap] = useState<number>(4);
   const snapLevels = [1, 2, 4, 8, 16];
 
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const { currentTime, isPlaying, setCurrentTime } = useAppStore();
 
-  const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameId = useRef<number>();
@@ -161,18 +159,17 @@ export function DesignTab({ map, song }: DesignTabProps) {
   // Animation loop using requestAnimationFrame
   useEffect(() => {
     const loop = () => {
-      const time = audioRef.current?.currentTime ?? currentTime;
-      if (isPlaying) {
-        setCurrentTime(time);
-      }
-      draw(time);
+      draw(currentTime);
       animationFrameId.current = requestAnimationFrame(loop);
     };
-    loop();
+    animationFrameId.current = requestAnimationFrame(loop);
+
     return () => {
-      if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
     };
-  }, [isPlaying, map, currentTime]); // Re-run if any of these change
+  }, [map, currentTime]); // Re-run if any of these change
 
   // Handle canvas resizing
   useEffect(() => {
@@ -187,7 +184,7 @@ export function DesignTab({ map, song }: DesignTabProps) {
       canvas.height = height * dpr;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-      draw(audioRef.current?.currentTime ?? currentTime);
+      draw(useAppStore.getState().currentTime);
     });
     resizeObserver.observe(container);
 
@@ -198,26 +195,17 @@ export function DesignTab({ map, song }: DesignTabProps) {
     canvas.height = height * dpr;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
+    draw(currentTime);
 
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [currentTime]);
 
   // Handle scroll-to-snap
   const handleWheel = (e: React.WheelEvent) => {
     if (isPlaying) return;
     e.preventDefault();
     const newTime = getSnapTime(currentTime, e.deltaY > 0 ? "next" : "prev");
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-    }
     setCurrentTime(newTime);
-  };
-
-  // Sync state with audio element when seeking manually
-  const handleTimeUpdate = () => {
-    if (audioRef.current && !isPlaying) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
   };
 
   return (
@@ -235,25 +223,6 @@ export function DesignTab({ map, song }: DesignTabProps) {
 
       <div className="flex-grow relative bg-card border rounded-lg overflow-hidden" ref={containerRef} onWheel={handleWheel}>
         <canvas ref={canvasRef} className="absolute top-0 left-0" />
-      </div>
-
-      <div className="shrink-0">
-        {song?.url ? (
-          <audio
-            ref={audioRef}
-            key={song.url}
-            src={song.url}
-            controls
-            className="w-full"
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onSeeked={handleTimeUpdate}
-          />
-        ) : (
-          <div className="text-center text-muted-foreground p-4 bg-muted rounded-md h-[54px] flex items-center justify-center">
-            Please select a song in the Metadata tab.
-          </div>
-        )}
       </div>
     </div>
   );

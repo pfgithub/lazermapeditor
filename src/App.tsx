@@ -5,6 +5,7 @@ import { TimingTab } from "@/components/TimingTab";
 import "./index.css";
 import { useEffect } from "react";
 import { useAppStore } from "./store";
+import { AudioPlayer } from "./components/AudioPlayer";
 
 // Types are now in src/store.ts
 
@@ -38,8 +39,11 @@ export function App() {
   }
 
   return (
-    <main className="w-screen h-screen flex flex-col bg-background text-foreground">
-      <Tabs defaultValue="metadata" className="w-full h-full flex flex-col p-2 gap-2">
+    <main className="w-screen h-screen flex flex-col bg-background text-foreground p-2 gap-2">
+      <div className="shrink-0">
+        <AudioPlayer />
+      </div>
+      <Tabs defaultValue="metadata" className="w-full flex-grow flex flex-col gap-2 min-h-0">
         <TabsList className="mx-auto shrink-0">
           <TabsTrigger value="metadata">Metadata</TabsTrigger>
           <TabsTrigger value="design">Design</TabsTrigger>
@@ -49,10 +53,10 @@ export function App() {
           <MetadataTab song={song} setSong={setSongFile} />
         </TabsContent>
         <TabsContent value="design" className="flex-grow min-h-0">
-          <DesignTab map={map} song={song} />
+          <DesignTab map={map} />
         </TabsContent>
         <TabsContent value="timing" className="flex-grow min-h-0 bg-card rounded-lg border">
-          <TimingTab map={map} setMap={setMap} songUrl={song?.url ?? null} />
+          <TimingTab map={map} setMap={setMap} />
         </TabsContent>
       </Tabs>
     </main>
