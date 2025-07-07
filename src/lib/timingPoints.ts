@@ -1,4 +1,3 @@
-```ts
 import type { Map, TimingSegment } from "@/store";
 
 export function calculateTimingPointsInRange(map: Map, startTime: number, endTime: number, divisionCount: Snap): number[] {
@@ -81,4 +80,3 @@ export function getColorForSnap(snap: Snap | undefined) {
   if(snap === 12) return "SandyBrown";
   return "gray";
 }
-```

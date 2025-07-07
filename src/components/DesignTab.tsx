@@ -1,4 +1,3 @@
-```tsx
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -168,4 +167,3 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
     </div>
   );
 }
-```
