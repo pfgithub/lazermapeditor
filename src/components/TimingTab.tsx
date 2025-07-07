@@ -1,9 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Map, TimingSegment } from "@/store";
+import { WaveformDisplay } from "./WaveformDisplay";
 
 interface TimingTabProps {
   map: Map;
@@ -14,8 +15,42 @@ interface TimingTabProps {
 export function TimingTab({ map, setMap, songUrl }: TimingTabProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const animationFrameId = useRef<number>();
 
   const selectedSegment = map.timing.find((s) => s.id === selectedSegmentId);
+
+  // Animation loop for current time for waveform display
+  useEffect(() => {
+    const loop = () => {
+      if (audioRef.current) {
+        setCurrentTime(audioRef.current.currentTime);
+      }
+      animationFrameId.current = requestAnimationFrame(loop);
+    };
+
+    if (isPlaying) {
+      animationFrameId.current = requestAnimationFrame(loop);
+    } else {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    }
+
+    return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    };
+  }, [isPlaying]);
+
+  // Sync state with audio element when seeking manually
+  const handleTimeUpdate = () => {
+    if (audioRef.current && !isPlaying) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
 
   const handleAddSegment = () => {
     const currentTime = audioRef.current?.currentTime ?? 0;
@@ -57,8 +92,20 @@ export function TimingTab({ map, setMap, songUrl }: TimingTabProps) {
       <div className="flex-grow flex flex-col gap-4 p-4">
         {/* Top section: Player and Add button */}
         <div className="flex flex-col gap-2">
+          <div className="shrink-0 h-24">
+            <WaveformDisplay songUrl={songUrl} currentTime={currentTime} map={map} snap={16} />
+          </div>
           {songUrl ? (
-            <audio ref={audioRef} key={songUrl} src={songUrl} controls className="w-full" />
+            <audio
+              ref={audioRef}
+              key={songUrl}
+              src={songUrl}
+              controls
+              className="w-full"
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onSeeked={handleTimeUpdate}
+            />
           ) : (
             <div className="text-center text-muted-foreground p-4 bg-muted rounded-md h-[54px] flex items-center justify-center">
               Please select a song in the Metadata tab.
