@@ -1,24 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="tailwindcss">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prompt Generator</title>
+    <link rel="stylesheet" href="./tailwind.css">
+    <style>
+      /* Style the dialog backdrop */
+      dialog::backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+      }
+    </style>
   </head>
-  <body>
-    <form id="source-form" action="javascript:void 0">
-      <label>Prompt
-        <textarea name="prompt"></textarea></label>
-      <button>Copy to Clipboard</button>
-    </form>
-    <dialog id="result-form-dialog">
-      <form id="result-form" action="javascript:void 0">
-        <label>Result
-          <textarea name="result"></textarea></label>
-        <button>Apply</button>
+  <body
+    class="bg-slate-900 text-gray-200 flex items-center justify-center min-h-screen"
+  >
+    <!-- Main Form Card -->
+    <div class="w-full max-w-2xl p-8 bg-slate-800 rounded-xl shadow-2xl">
+      <form id="source-form" class="flex flex-col gap-6">
+        <div>
+          <label
+            for="prompt-textarea"
+            class="block mb-2 text-lg font-semibold text-gray-300"
+            >Prompt</label
+          >
+          <textarea
+            id="prompt-textarea"
+            name="prompt"
+            rows="10"
+            placeholder="Enter your initial prompt here..."
+            class="w-full p-4 bg-slate-900 border border-slate-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow"
+          ></textarea>
+        </div>
+        <button
+          type="submit"
+          class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-blue-500"
+        >
+          Copy to Clipboard
+        </button>
+      </form>
+    </div>
+
+    <!-- Result Dialog Modal -->
+    <dialog id="result-form-dialog" class="bg-slate-800 text-gray-200 p-8 rounded-xl shadow-2xl w-full max-w-2xl border border-slate-700 relative">
+      <!-- Close Button -->
+      <button id="close-dialog" type="button" class="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <form id="result-form" class="flex flex-col gap-6">
+        <div>
+          <label
+            for="result-textarea"
+            class="block mb-2 text-lg font-semibold text-gray-300"
+            >Result</label
+          >
+          <textarea
+            id="result-textarea"
+            name="result"
+            rows="10"
+            placeholder="Paste the generated result here to apply changes..."
+            class="w-full p-4 bg-slate-900 border border-slate-700 rounded-md focus:ring-2 focus:ring-green-500 focus:outline-none transition-shadow"
+          ></textarea>
+        </div>
+        <button
+          type="submit"
+          class="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-green-500"
+        >
+          Apply
+        </button>
       </form>
     </dialog>
+
     <script src="./prompt.ts"></script>
   </body>
 </html>

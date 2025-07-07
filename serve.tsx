@@ -2,6 +2,7 @@ import { serve } from "bun";
 import index from "./src/index.html";
 import { genViewerPrompt } from "prompt";
 import prompt from "./other/prompt.html";
+import { apply } from "apply";
 
 const server = serve({
   routes: {
@@ -14,6 +15,19 @@ const server = serve({
       },
     }),
     "/prompt": prompt,
+    "/api/apply": {POST: async (req) => {
+      const formData = await req.formData();
+      const prompt = formData.get("prompt");
+      const result = formData.get("result");
+      try {
+        if(typeof prompt !== "string" || typeof result !== "string") throw new Error("not strings");
+        apply(prompt, result);
+      }catch(e) {
+        console.error(e);
+        return new Response("error", {status: 400, headers: {'Content-Type': "text/plain"}});
+      }
+      return new Response("ok", {headers: {'Content-Type': "text/plain"}});
+    }},
   },
 
   development: process.env.NODE_ENV !== "production" && {
