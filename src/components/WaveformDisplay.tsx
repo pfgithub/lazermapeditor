@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Map } from "@/store";
+import type { Map } from "@/store";
 import {
   calculateTimingPointsInRange,
   getColorForSnap,
@@ -9,7 +9,7 @@ import {
 
 interface WaveformDisplayProps {
   songUrl: string | null | undefined;
-  currentTime: number;
+  audioEl?: HTMLAudioElement;
   map: Map;
   snap: Snap;
 }
@@ -95,7 +95,7 @@ const drawWaveform = (
   }
 };
 
-export function WaveformDisplay({ songUrl, currentTime, map, snap }: WaveformDisplayProps) {
+export function WaveformDisplay({ songUrl, audioEl, map, snap }: WaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -147,9 +147,9 @@ export function WaveformDisplay({ songUrl, currentTime, map, snap }: WaveformDis
       return;
     }
 
-    drawWaveform(ctx, width, height, audioBuffer, currentTime);
-    drawSnapMarkers(ctx, width, height, currentTime, map, snap);
-  }, [audioBuffer, currentTime, map, snap]);
+    drawWaveform(ctx, width, height, audioBuffer, audioEl?.currentTime ?? 0);
+    drawSnapMarkers(ctx, width, height, audioEl?.currentTime ?? 0, map, snap);
+  }, [audioBuffer, map, snap]);
 
   useEffect(() => {
     draw();
