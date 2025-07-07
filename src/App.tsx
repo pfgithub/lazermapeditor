@@ -236,12 +236,12 @@ function DesignTab({ map, song }: { map: Map; song: Song | null }) {
   };
 
   // Calculates the time of the next or previous snap point.
-  const getSnapTime = (time: number, direction: "next" | "prev") => {
+  const getSnapTime = (time: number, direction: "next" | "prev", division: number = snap) => {
     const activeSegment = getActiveTiming(time);
     if (activeSegment.bpm <= 0) return time + (direction === "next" ? 1 : -1);
 
     const beatDuration = 60 / activeSegment.bpm;
-    const snapDuration = beatDuration * (4 / snap);
+    const snapDuration = beatDuration * (4 / division);
 
     // This logic correctly calculates the snap based on the active segment's grid.
     const relativeTime = time - activeSegment.startTime;
@@ -284,38 +284,73 @@ function DesignTab({ map, song }: { map: Map; song: Song | null }) {
       }
     };
 
-    if (map.timing.length === 0) return; // Don't draw lines if no timing info
+    if (map.timing.length === 0 && getActiveTiming(time).bpm <= 0) return; // Don't draw lines if no timing info
 
     // Helper to draw lines in one direction (past or future)
     const drawLines = (startAt: number, direction: "next" | "prev") => {
       let currentLineTime = startAt;
-      for (let i = 0; i < 100; i++) { // Limit to 100 lines to prevent infinite loops
+      for (let i = 0; i < 200; i++) {
+        // Limit to 200 lines to prevent infinite loops
         const y = posToY(currentLineTime);
 
         // Stop drawing if lines are way off-screen
         if (y < -20 || y > height + 20) {
-          if (i === 0) currentLineTime = getSnapTime(currentLineTime, direction); // Ensure we eventually get on screen
-          else break;
+          if (i === 0) {
+            currentLineTime = getSnapTime(currentLineTime, direction, 16); // Ensure we eventually get on screen
+            continue;
+          } else {
+            break;
+          }
         }
 
         const { bpm, startTime } = getActiveTiming(currentLineTime);
-        const beatDuration = 60 / bpm;
+        if (bpm > 0) {
+          const beatDuration = 60 / bpm;
+          const relativeTime = currentLineTime - startTime;
 
-        const isBeat = Math.abs((currentLineTime - startTime) % beatDuration) < 0.001;
+          const isNth = (n: number) => {
+            const divisionDuration = (beatDuration * 4) / n;
+            if (divisionDuration < 0.001) return false;
+            const numDivisions = relativeTime / divisionDuration;
+            return Math.abs(numDivisions - Math.round(numDivisions)) < 0.001;
+          };
 
-        ctx.lineWidth = isBeat ? 1.5 : 1;
-        ctx.strokeStyle = isBeat ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))";
+          let strokeStyle = "";
+          let lineWidth = 1;
 
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
+          if (isNth(1)) {
+            strokeStyle = "black";
+            lineWidth = 1.5;
+          } else if (isNth(2)) {
+            strokeStyle = "red";
+            lineWidth = 1.25;
+          } else if (isNth(4)) {
+            strokeStyle = "lightblue";
+            lineWidth = 1;
+          } else if (isNth(8)) {
+            strokeStyle = "yellow";
+            lineWidth = 0.75;
+          } else if (isNth(16)) {
+            strokeStyle = "orange";
+            lineWidth = 0.5;
+          }
 
-        currentLineTime = getSnapTime(currentLineTime, direction);
+          if (strokeStyle) {
+            ctx.lineWidth = lineWidth;
+            ctx.strokeStyle = strokeStyle;
+
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+            ctx.stroke();
+          }
+        }
+
+        currentLineTime = getSnapTime(currentLineTime, direction, 16);
       }
     };
 
-    drawLines(getSnapTime(time - 0.001, "next"), "next");
+    drawLines(getSnapTime(time - 0.001, "next", 16), "next");
     drawLines(time, "prev"); // Start from current time to draw past lines
 
     // --- Draw Judgement Line ---
@@ -344,7 +379,7 @@ function DesignTab({ map, song }: { map: Map; song: Song | null }) {
     return () => {
       if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
     };
-  }, [isPlaying, snap, map, currentTime]); // Re-run if any of these change
+  }, [isPlaying, map, currentTime]); // Re-run if any of these change
 
   // Handle canvas resizing
   useEffect(() => {
@@ -466,4 +501,4 @@ export function App() {
   );
 }
 
-export default App;
+export default App;
