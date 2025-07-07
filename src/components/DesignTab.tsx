@@ -1,21 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { Map, Song } from "@/store";
-import { WaveformDisplay } from "./WaveformDisplay";
+import type { Map } from "@/store";
 import { calculateTimingPointsInRange, getColorForSnap, getSnapForTime, snapLevels, type Snap } from "@/lib/timingPoints";
 
 interface DesignTabProps {
   map: Map;
-  song: Song | null;
+  audioRef: React.RefObject<HTMLAudioElement>;
+  snap: Snap;
+  setSnap: (snap: Snap) => void;
 }
 
-export function DesignTab({ map, song }: DesignTabProps) {
-  const [snap, setSnap] = useState<Snap>(4);
-
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-
-  const audioRef = useRef<HTMLAudioElement>(null);
+export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameId = useRef<number | undefined>(undefined);
@@ -86,11 +82,11 @@ export function DesignTab({ map, song }: DesignTabProps) {
       draw(time);
       animationFrameId.current = requestAnimationFrame(loop);
     };
-    loop();
+    animationFrameId.current = requestAnimationFrame(loop);
     return () => {
       if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
     };
-  }, [isPlaying, map, snap]); // Re-run if any of these change
+  }, [map, snap, audioRef]); // Re-run if any of these change
 
   // Handle canvas resizing
   useEffect(() => {
@@ -118,7 +114,7 @@ export function DesignTab({ map, song }: DesignTabProps) {
     canvas.style.height = `${height}px`;
 
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [audioRef]);
 
   return (
     <div className="flex flex-col h-full gap-2">
@@ -133,30 +129,8 @@ export function DesignTab({ map, song }: DesignTabProps) {
         </div>
       </div>
 
-      <div className="shrink-0 h-24">
-        <WaveformDisplay songUrl={song?.url} audioEl={audioRef.current} map={map} snap={snap} />
-      </div>
-
       <div className="flex-grow relative bg-card border rounded-lg overflow-hidden" ref={containerRef}>
         <canvas ref={canvasRef} className="absolute top-0 left-0" />
-      </div>
-
-      <div className="shrink-0">
-        {song?.url ? (
-          <audio
-            ref={audioRef}
-            key={song.url}
-            src={song.url}
-            controls
-            className="w-full"
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-          />
-        ) : (
-          <div className="text-center text-muted-foreground p-4 bg-muted rounded-md h-[54px] flex items-center justify-center">
-            Please select a song in the Metadata tab.
-          </div>
-        )}
       </div>
     </div>
   );
