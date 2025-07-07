@@ -1,3 +1,4 @@
+```ts
 import type { Map, TimingSegment } from "@/store";
 
 export function calculateTimingPointsInRange(map: Map, startTime: number, endTime: number, divisionCount: Snap): number[] {
@@ -16,7 +17,7 @@ export function calculateTimingPointsInRange(map: Map, startTime: number, endTim
     const beatDuration = 60 / renderSegment.segment.bpm / divisionCount;
     const firstBeatMarkerTime = renderSegment.segment.startTime;
     const startIndex = Math.ceil((renderSegment.start - firstBeatMarkerTime) / beatDuration);
-    for(let i = startIndex; i < (startIndex + 100); i++) {
+    for(let i = startIndex; ; i++) {
       const beatTime = firstBeatMarkerTime + i * beatDuration;
       if(beatTime > renderSegment.end) break;
       
@@ -25,6 +26,20 @@ export function calculateTimingPointsInRange(map: Map, startTime: number, endTim
   }
 
   return results;
+}
+
+export function findNextSnap(map: Map, time: number, snap: Snap): number | null {
+  // A small epsilon to avoid getting the current time back
+  const points = calculateTimingPointsInRange(map, time + 0.00001, time + 10, snap);
+  if (points.length > 0) return points[0];
+  return null;
+}
+
+export function findPreviousSnap(map: Map, time: number, snap: Snap): number | null {
+  // A small epsilon to avoid getting the current time back
+  const points = calculateTimingPointsInRange(map, Math.max(0, time - 10), time - 0.00001, snap);
+  if (points.length > 0) return points[points.length - 1];
+  return null;
 }
 
 export type Snap = 1 | 2 | 4 | 8 | 16 | 3 | 6 | 12 | 24;
@@ -66,3 +81,4 @@ export function getColorForSnap(snap: Snap | undefined) {
   if(snap === 12) return "SandyBrown";
   return "gray";
 }
+```

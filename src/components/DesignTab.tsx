@@ -1,8 +1,17 @@
+```tsx
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { Map } from "@/store";
-import { calculateTimingPointsInRange, getColorForSnap, getSnapForTime, snapLevels, type Snap } from "@/lib/timingPoints";
+import {
+  calculateTimingPointsInRange,
+  findNextSnap,
+  findPreviousSnap,
+  getColorForSnap,
+  getSnapForTime,
+  snapLevels,
+  type Snap,
+} from "@/lib/timingPoints";
 
 interface DesignTabProps {
   map: Map;
@@ -44,11 +53,11 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
     const endTime = time + 1.0;
 
     const posToY = (lineTime: number) => {
-      return height - (lineTime - startTime) / (endTime - startTime) * height;
+      return height - ((lineTime - startTime) / (endTime - startTime)) * height;
     };
 
     const timingPoints = calculateTimingPointsInRange(map, startTime, endTime, snap);
-    for(const timingPoint of timingPoints) {
+    for (const timingPoint of timingPoints) {
       const pointSnap = getSnapForTime(map, timingPoint);
       let strokeStyle = getColorForSnap(pointSnap);
       let lineWidth = 1;
@@ -116,6 +125,26 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
     return () => resizeObserver.disconnect();
   }, [audioRef]);
 
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!audioRef.current) return;
+    e.preventDefault();
+
+    const currentTime = audioRef.current.currentTime;
+    let nextTime: number | null = null;
+
+    if (e.deltaY > 0) {
+      // Scroll down -> forward in time
+      nextTime = findNextSnap(map, currentTime, snap);
+    } else {
+      // Scroll up -> backward in time
+      nextTime = findPreviousSnap(map, currentTime, snap);
+    }
+
+    if (nextTime !== null) {
+      audioRef.current.currentTime = nextTime;
+    }
+  };
+
   return (
     <div className="flex flex-col h-full gap-2">
       <div className="flex items-center justify-between p-2 bg-card border rounded-lg shrink-0">
@@ -129,9 +158,14 @@ export function DesignTab({ map, audioRef, snap, setSnap }: DesignTabProps) {
         </div>
       </div>
 
-      <div className="flex-grow relative bg-card border rounded-lg overflow-hidden" ref={containerRef}>
+      <div
+        className="flex-grow relative bg-card border rounded-lg overflow-hidden"
+        ref={containerRef}
+        onWheel={handleWheel}
+      >
         <canvas ref={canvasRef} className="absolute top-0 left-0" />
       </div>
     </div>
   );
 }
+```
