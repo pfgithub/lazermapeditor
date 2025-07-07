@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Map } from "@/store";
+import {
+  calculateTimingPointsInRange,
+  getColorForSnap,
+  getSnapForTime,
+  type Snap,
+} from "@/lib/timingPoints";
 
 interface WaveformDisplayProps {
   songUrl: string | null | undefined;
@@ -9,28 +15,6 @@ interface WaveformDisplayProps {
 }
 
 const DURATION_S = 3; // How many seconds of waveform to show
-
-const getActiveTiming = (time: number, map: Map) => {
-  if (map.timing.length === 0) {
-    return { id: "default", bpm: 120, startTime: 0 };
-  }
-  return map.timing.findLast((s) => s.startTime <= time) ?? map.timing[0];
-};
-
-const getSnapTime = (time: number, direction: "next" | "prev", division: number, map: Map) => {
-  const activeSegment = getActiveTiming(time, map);
-  if (activeSegment.bpm <= 0) return time + (direction === "next" ? 1 : -1);
-
-  const beatDuration = 60 / activeSegment.bpm;
-  const snapDuration = beatDuration * (4 / division);
-
-  const relativeTime = time - activeSegment.startTime;
-  const numSnaps = relativeTime / snapDuration;
-
-  const targetSnapIndex = direction === "next" ? Math.floor(numSnaps) + 1 : Math.ceil(numSnaps) - 1;
-
-  return activeSegment.startTime + targetSnapIndex * snapDuration;
-};
 
 const drawSnapMarkers = (
   ctx: CanvasRenderingContext2D,
@@ -43,62 +27,49 @@ const drawSnapMarkers = (
   const viewEndTime = viewStartTime + DURATION_S;
   const timeToX = (lineTime: number) => ((lineTime - viewStartTime) / DURATION_S) * width;
 
-  // Start drawing from the first visible snap line
-  let currentLineTime = getSnapTime(viewStartTime - 0.001, "next", 16, map);
+  // Generate points for both binary (1/16) and ternary (1/24) divisions to cover all snaps.
+  const binaryPoints = calculateTimingPointsInRange(map, viewStartTime, viewEndTime, 4 as Snap); // 1/16 notes
+  const tripletPoints = calculateTimingPointsInRange(map, viewStartTime, viewEndTime, 6 as Snap); // 1/24 notes
+  const timingPoints = Array.from(new Set([...binaryPoints, ...tripletPoints])).sort();
 
-  for (let i = 0; i < 500 && currentLineTime < viewEndTime; i++) {
-    const { bpm, startTime } = getActiveTiming(currentLineTime, map);
-    if (bpm <= 0) {
-      // Just move to the next 1/16th in case of 0 bpm
-      currentLineTime = getSnapTime(currentLineTime, "next", 16, map);
+  for (const time of timingPoints) {
+    const pointSnap = getSnapForTime(map, time);
+    if (!pointSnap) {
       continue;
     }
 
-    const beatDuration = 60 / bpm;
-    const relativeTime = currentLineTime - startTime;
+    // Convert beat-based snap from getSnapForTime to whole-note-based snap divisor
+    // A whole note has 4 beats, so the divisor is 4x the beat division.
+    const divisor = pointSnap * 4;
+    if (divisor > snap) {
+      continue; // Filter out snaps finer than the selected one
+    }
 
-    // Add a small epsilon to handle floating point inaccuracies
-    const isNth = (n: number) => {
-      const divisionDuration = (beatDuration * 4) / n;
-      if (divisionDuration < 0.001) return false;
-      const numDivisions = relativeTime / divisionDuration;
-      return Math.abs(numDivisions - Math.round(numDivisions)) < 0.001;
-    };
-
-    let strokeStyle = "";
+    const strokeStyle = getColorForSnap(pointSnap);
     let lineWidth = 1;
 
-    // Ordered from coarsest to finest for `else if` to work correctly.
-    if (isNth(1)) {
-      strokeStyle = "hsl(var(--destructive))";
+    // Make coarser snaps thicker for better visibility, similar to original implementation.
+    // In getSnapForTime: 1=beat, 2=1/8, 4=1/16...
+    if (pointSnap === 1) {
+      // This is a beat (1/4 note). The new `getSnapForTime` can't distinguish
+      // it from half or whole notes, so they will all share this style.
       lineWidth = 1.5;
-    } else if (isNth(2) && snap >= 2) {
-      strokeStyle = "hsl(var(--foreground) / 0.8)";
-      lineWidth = 1;
-    } else if (isNth(4) && snap >= 4) {
-      strokeStyle = "hsl(var(--foreground) / 0.6)";
-      lineWidth = 1;
-    } else if (isNth(8) && snap >= 8) {
-      strokeStyle = "hsl(var(--foreground) / 0.4)";
+    } else if (pointSnap > 2) {
+      // Finer snaps like 1/16, 1/24 etc.
       lineWidth = 0.75;
-    } else if (isNth(16) && snap >= 16) {
-      strokeStyle = "hsl(var(--foreground) / 0.3)";
-      lineWidth = 0.5;
     }
 
     if (strokeStyle) {
       ctx.save();
       ctx.strokeStyle = strokeStyle;
       ctx.lineWidth = lineWidth;
-      const x = timeToX(currentLineTime);
+      const x = timeToX(time);
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
       ctx.stroke();
       ctx.restore();
     }
-
-    currentLineTime = getSnapTime(currentLineTime, "next", 16, map);
   }
 };
 
