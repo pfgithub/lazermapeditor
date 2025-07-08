@@ -173,16 +173,15 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         ctx.stroke();
       }
 
-      // --- Draw Keys ---
-      for (const key of map.keys) {
+      const drawKey = (key: Key) => {
         const keyId = getKeyId(key);
         // If this key is being dragged, we draw the preview version later.
         if (draggedKeysPreview && dragContextRef.current?.type === "drag" && dragContextRef.current.originalKeys.has(keyId)) {
-          continue;
+          return;
         }
 
         if (key.endTime < startTime || key.startTime > endTime) {
-          continue;
+          return;
         }
         const y_start = posToY(key.startTime);
         const y_end = posToY(key.endTime);
@@ -219,6 +218,20 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
             ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
           }
         }
+      };
+
+      // --- Draw Keys ---
+      for (const key of map.keys) {
+        drawKey(key);
+      }
+
+      // Draw in-progress notes
+      for(const [lane, startTime] of Object.entries(activeHoldsRef.current)) {
+        drawKey({
+          startTime,
+          endTime: findNearestSnap(map, time, snap) ?? time,
+          key: +lane as Key["key"],
+        });
       }
       
       // --- Draw Dragged Keys Preview ---
@@ -302,8 +315,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         activeEl &&
         ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
           activeEl.tagName === "TEXTAREA" ||
-          activeEl.tagName === "SELECT" ||
-          activeEl.tagName === "BUTTON")
+          activeEl.tagName === "SELECT")
       ) {
         return;
       }
