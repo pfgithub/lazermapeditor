@@ -17,6 +17,61 @@ interface WaveformDisplayProps {
 
 const DURATION_S = 3; // How many seconds of waveform to show
 
+const drawNotes = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  viewStartTime: number,
+  map: Beatmap,
+) => {
+  const viewEndTime = viewStartTime + DURATION_S;
+  const timeToX = (time: number) => ((time - viewStartTime) / DURATION_S) * width;
+
+  const laneHeight = height / 4;
+  const noteHeight = laneHeight * 0.8;
+  const noteYOffset = laneHeight * 0.1;
+
+  for (const note of map.notes) {
+    if (note.endTime < viewStartTime || note.startTime > viewEndTime) {
+      continue;
+    }
+
+    const x_start = timeToX(note.startTime);
+    const y = note.key * laneHeight + noteYOffset;
+    const color = getColorForSnap(getSnapForTime(map, note.startTime));
+
+    if (note.startTime === note.endTime) {
+      // Tap note
+      ctx.fillStyle = color;
+      ctx.fillRect(x_start - 1.5, y, 3, noteHeight);
+    } else {
+      // Hold note, draw as a rectangle
+      const x_end = timeToX(note.endTime);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect(x_start, y, x_end - x_start, noteHeight);
+
+      // Add border to hold notes
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x_start, y, x_end - x_start, noteHeight);
+    }
+  }
+};
+
+const drawPlayhead = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  const x = width / 2;
+  ctx.strokeStyle = "hsl(0, 0%, 100%)"; // Opaque white
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(x, 0);
+  ctx.lineTo(x, height);
+  ctx.stroke();
+  ctx.globalAlpha = 1.0;
+};
+
 const drawSnapMarkers = (
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -116,8 +171,12 @@ export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, ma
       return;
     }
 
-    drawWaveform(ctx, width, height, audioBuffer, getCurrentTime(), primaryColor);
-    drawSnapMarkers(ctx, width, height, getCurrentTime(), map, snap);
+    const viewStartTime = getCurrentTime() - DURATION_S / 2;
+
+    drawWaveform(ctx, width, height, audioBuffer, viewStartTime, primaryColor);
+    drawSnapMarkers(ctx, width, height, viewStartTime, map, snap);
+    drawNotes(ctx, width, height, viewStartTime, map);
+    drawPlayhead(ctx, width, height);
   }, [audioBuffer, map, snap, getCurrentTime, primaryColor]);
 
   useEffect(() => {
