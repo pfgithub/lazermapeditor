@@ -31,7 +31,7 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
   const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set());
 
   // State for box selection
-  const [selectionBox, setSelectionBox] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [selectionBox, setSelectionBox] = useState<{ x1: number; t1: number; x2: number; t2: number } | null>(null);
   const isDraggingRef = useRef(false);
 
   // Memoized function to convert time to a Y-coordinate on the canvas
@@ -44,6 +44,23 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
       const startTime = currentTime - 0.1;
       const endTime = currentTime + 1.0;
       return height - ((lineTime - startTime) / (endTime - startTime)) * height;
+    },
+    [currentTime],
+  );
+  const yToPos = useCallback(
+    (y: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return 0; // Or handle as an error, depending on desired behavior
+      const { height } = canvas.getBoundingClientRect();
+      if (height === 0) return 0; // Or handle as an error
+
+      const startTime = currentTime - 0.1;
+      const endTime = currentTime + 1.0;
+
+      if (height === 0) return startTime;
+
+      const lineTime = startTime + ((height - y) / height) * (endTime - startTime);
+      return lineTime;
     },
     [currentTime],
   );
@@ -139,7 +156,9 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
 
       // --- Draw Selection Box ---
       if (selectionBox) {
-        const { x1, y1, x2, y2 } = selectionBox;
+        const { x1, t1, x2, t2 } = selectionBox;
+        const y1 = posToY(t1);
+        const y2 = posToY(t2);
         ctx.fillStyle = "hsla(var(--ring), 0.2)";
         ctx.strokeStyle = "hsl(var(--ring))";
         ctx.lineWidth = 1;
@@ -335,9 +354,11 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
   };
 
   const getKeysInBox = useCallback(
-    (x1: number, y1: number, x2: number, y2: number): Key[] => {
+    (x1: number, t1: number, x2: number, t2: number): Key[] => {
       const canvas = canvasRef.current;
       if (!canvas) return [];
+      const y1 = posToY(t1);
+      const y2 = posToY(t2);
 
       const rect = canvas.getBoundingClientRect();
       const numLanes = 4;
@@ -463,8 +484,8 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    setSelectionBox({ x1: x, y1: y, x2: x, y2: y });
-  }, []);
+    setSelectionBox({ x1: x, t1: yToPos(y), x2: x, t2: yToPos(y) });
+  }, [yToPos]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
@@ -477,9 +498,9 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
 
     setSelectionBox((prev) => {
       if (!prev) return null;
-      return { ...prev, x2: x, y2: y };
+      return { ...prev, x2: x, t2: yToPos(y) };
     });
-  }, []);
+  }, [yToPos]);
 
   const handleMouseUp = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -488,7 +509,9 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
 
       if (!selectionBox) return;
 
-      const { x1, y1, x2, y2 } = selectionBox;
+      const { x1, t1, x2, t2 } = selectionBox;
+      const y1 = posToY(t1);
+      const y2 = posToY(t2);
       const dragDistance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 
       if (dragDistance < 5) {
@@ -496,7 +519,7 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
         handleClick(e as any);
       } else {
         // It's a drag-select
-        const keysInBox = getKeysInBox(x1, y1, x2, y2);
+        const keysInBox = getKeysInBox(x1, t1, x2, t2);
         const keyIdsInBox = new Set(keysInBox.map(getKeyId));
 
         const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
@@ -510,7 +533,7 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
       }
       setSelectionBox(null);
     },
-    [selectionBox, handleClick, getKeysInBox, selectedKeyIds],
+    [selectionBox, handleClick, getKeysInBox, selectedKeyIds, posToY],
   );
 
   return (

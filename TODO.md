@@ -5,3 +5,4 @@ Bun bug!
 TODO:
 
 - [ ] never expose currentTime to react
+  - it lied about doing it twice. so i'll do it myself
