@@ -1,4 +1,3 @@
-```tsx
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -270,4 +269,3 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
     </div>
   );
 }
-```

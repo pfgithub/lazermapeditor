@@ -1,4 +1,3 @@
-```ts
 import type { Key, Map } from "@/store";
 import {
   calculateTimingPointsInRange,
@@ -509,4 +508,3 @@ export class DesignCanvasController {
     ctx.restore();
   }
 }
-```
