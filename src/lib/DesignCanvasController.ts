@@ -193,7 +193,7 @@ export class DesignCanvasController {
           this.selectedKeyIds.add(clickedKey);
         }
       } else {
-        if (!isSelected || this.selectedKeyIds.size > 1) {
+        if (!isSelected) {
           this.selectedKeyIds.clear();
           this.selectedKeyIds.add(clickedKey);
         }
