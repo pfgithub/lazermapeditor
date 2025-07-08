@@ -21,6 +21,7 @@ export function App() {
   const { map, song, setMap, setSongFile, loadFromDb, isInitialized } = useAppStore();
   const audioControllerRef = useRef<AudioController | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+  const [isSongLoading, setIsSongLoading] = useState(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -75,14 +76,20 @@ export function App() {
   useEffect(() => {
     const controller = audioControllerRef.current;
     if (song?.url && controller) {
+      setIsSongLoading(true);
       setIsPlaying(false);
       setCurrentTime(0);
       setDuration(0);
       setAudioBuffer(null);
-      controller.load(song.url).catch((err) => {
-        console.error("Failed to load audio", err);
-        // TODO: show an error to the user
-      });
+      controller
+        .load(song.url)
+        .catch((err) => {
+          console.error("Failed to load audio", err);
+          // TODO: show an error to the user
+        })
+        .finally(() => {
+          setIsSongLoading(false);
+        });
     } else {
       setAudioBuffer(null);
       setDuration(0);
@@ -188,6 +195,7 @@ export function App() {
         <div className="h-24">
           <WaveformDisplay
             audioBuffer={audioBuffer}
+            isSongLoading={isSongLoading}
             currentTime={currentTime}
             map={map}
             snap={snapForWaveform}

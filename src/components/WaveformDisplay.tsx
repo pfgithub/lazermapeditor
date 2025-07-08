@@ -9,6 +9,7 @@ import {
 
 interface WaveformDisplayProps {
   audioBuffer: AudioBuffer | null;
+  isSongLoading: boolean;
   currentTime: number;
   map: Map;
   snap: Snap;
@@ -95,7 +96,7 @@ const drawWaveform = (
   }
 };
 
-export function WaveformDisplay({ audioBuffer, currentTime, map, snap }: WaveformDisplayProps) {
+export function WaveformDisplay({ audioBuffer, isSongLoading, currentTime, map, snap }: WaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -157,7 +158,11 @@ export function WaveformDisplay({ audioBuffer, currentTime, map, snap }: Wavefor
     <div ref={containerRef} className="w-full h-full relative bg-muted/50 rounded-lg overflow-hidden border">
       <canvas ref={canvasRef} className="absolute top-0 left-0" />
       <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm p-4 text-center pointer-events-none">
-        {!audioBuffer && <p>Load a song in the Metadata tab to see the waveform.</p>}
+        {isSongLoading ? (
+          <p>Loading song...</p>
+        ) : !audioBuffer ? (
+          <p>Load a song in the Metadata tab to see the waveform.</p>
+        ) : null}
       </div>
     </div>
   );
