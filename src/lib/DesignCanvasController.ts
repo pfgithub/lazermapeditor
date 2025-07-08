@@ -30,11 +30,6 @@ export interface DesignCanvasControllerOptions {
   map: Map;
   getCurrentTime: () => number;
   snap: Snap;
-  themeColors: {
-    border: string;
-    ring: string;
-    ringTransparent: string;
-  };
   setMap: (map: Map) => void;
 }
 const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
