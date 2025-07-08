@@ -44,13 +44,18 @@ const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
   k: 3,
 };
 
+const themeColors = {
+  border: "hsl(217.2 32.6% 17.5%)",
+  ring: "hsl(217.2 91.2% 59.8%)",
+  ringTransparent: "hsla(217.2 91.2% 59.8% / 0.2)",
+};
+
 export class DesignCanvasController {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private map: Map;
   private getCurrentTime: () => number;
   private snap: Snap;
-  private themeColors: { border: string; ring: string; ringTransparent: string };
   
   private setMap: (map: Map) => void;
   
@@ -72,7 +77,6 @@ export class DesignCanvasController {
     this.map = options.map;
     this.getCurrentTime = options.getCurrentTime;
     this.snap = options.snap;
-    this.themeColors = options.themeColors;
 
     this.setMap = options.setMap;
   }
@@ -411,7 +415,7 @@ export class DesignCanvasController {
     const viewEndTime = time + 1.0;
 
     // --- Draw Columns for 4K ---
-    ctx.strokeStyle = this.themeColors.border;
+    ctx.strokeStyle = themeColors.border;
     ctx.lineWidth = 1;
     for (let i = 1; i < numLanes; i++) {
       ctx.beginPath();
@@ -450,7 +454,7 @@ export class DesignCanvasController {
         ctx.lineTo(x_start + laneWidth - 5, y_start);
         ctx.stroke();
         if (isSelected) {
-          ctx.strokeStyle = this.themeColors.ring;
+          ctx.strokeStyle = themeColors.ring;
           ctx.lineWidth = 2;
           ctx.strokeRect(x_start + 3, y_start - 5, laneWidth - 6, 10);
         }
@@ -465,7 +469,7 @@ export class DesignCanvasController {
         ctx.globalAlpha = 1.0;
         ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
         if (isSelected) {
-          ctx.strokeStyle = this.themeColors.ring;
+          ctx.strokeStyle = themeColors.ring;
           ctx.lineWidth = 4;
           ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
         }
@@ -505,7 +509,7 @@ export class DesignCanvasController {
           ctx.moveTo(x_start + 5, y_start);
           ctx.lineTo(x_start + laneWidth - 5, y_start);
           ctx.stroke();
-          ctx.strokeStyle = this.themeColors.ring;
+          ctx.strokeStyle = themeColors.ring;
           ctx.lineWidth = 2;
           ctx.strokeRect(x_start + 3, y_start - 5, laneWidth - 6, 10);
         } else {
@@ -517,7 +521,7 @@ export class DesignCanvasController {
           ctx.fillRect(x_start + 5, y_end, noteWidth, y_start - y_end);
           ctx.globalAlpha = 1.0;
           ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
-          ctx.strokeStyle = this.themeColors.ring;
+          ctx.strokeStyle = themeColors.ring;
           ctx.lineWidth = 4;
           ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
         }
@@ -529,8 +533,8 @@ export class DesignCanvasController {
       const { x1, t1, x2, t2 } = this.selectionBox;
       const y1 = this.posToY(t1);
       const y2 = this.posToY(t2);
-      ctx.fillStyle = this.themeColors.ringTransparent;
-      ctx.strokeStyle = this.themeColors.ring;
+      ctx.fillStyle = themeColors.ringTransparent;
+      ctx.strokeStyle = themeColors.ring;
       ctx.lineWidth = 1;
       const rectX = Math.min(x1, x2);
       const rectY = Math.min(y1, y2);

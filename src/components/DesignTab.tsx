@@ -21,12 +21,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<DesignCanvasController | null>(null);
 
-  const [themeColors, setThemeColors] = useState({
-    border: "hsl(217.2 32.6% 17.5%)",
-    ring: "hsl(217.2 91.2% 59.8%)",
-    ringTransparent: "hsla(217.2 91.2% 59.8% / 0.2)",
-  });
-
   // Initialize and update canvas controller
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -38,7 +32,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         map,
         getCurrentTime,
         snap,
-        themeColors,
         // Callbacks to update component state
         setMap,
       });
@@ -46,7 +39,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
       controllerRef.current.update({
         map,
         snap,
-        themeColors,
       });
     }
   }); // Runs on every render to keep controller props in sync
