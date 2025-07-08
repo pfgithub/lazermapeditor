@@ -32,7 +32,6 @@ export interface DesignCanvasControllerOptions {
   snap: Snap;
   selectedKeyIds: Set<string>;
   draggedKeysPreview: Key[] | null;
-  selectionBox: { x1: number; t1: number; x2: number; t2: number } | null;
   themeColors: {
     border: string;
     ring: string;
@@ -42,7 +41,6 @@ export interface DesignCanvasControllerOptions {
   setMap: (map: Map) => void;
   setSelectedKeyIds: (value: SetStateAction<Set<string>>) => void;
   setDraggedKeysPreview: (keys: Key[] | null) => void;
-  setSelectionBox: (box: { x1: number; t1: number; x2: number; t2: number } | null) => void;
 }
 
 export class DesignCanvasController {
@@ -60,7 +58,6 @@ export class DesignCanvasController {
   private setMap: (map: Map) => void;
   private setSelectedKeyIds: (value: SetStateAction<Set<string>>) => void;
   private setDraggedKeysPreview: (keys: Key[] | null) => void;
-  private setSelectionBox: (box: { x1: number; t1: number; x2: number; t2: number } | null) => void;
 
   private dragContext: DragContext = null;
 
@@ -77,21 +74,19 @@ export class DesignCanvasController {
     this.snap = options.snap;
     this.selectedKeyIds = options.selectedKeyIds;
     this.draggedKeysPreview = options.draggedKeysPreview;
-    this.selectionBox = options.selectionBox;
     this.themeColors = options.themeColors;
     this.activeHolds = options.activeHolds;
 
     this.setMap = options.setMap;
     this.setSelectedKeyIds = options.setSelectedKeyIds;
     this.setDraggedKeysPreview = options.setDraggedKeysPreview;
-    this.setSelectionBox = options.setSelectionBox;
   }
 
   public update(
     options: Partial<
       Omit<
         DesignCanvasControllerOptions,
-        "canvas" | "getCurrentTime" | "setMap" | "setSelectedKeyIds" | "setDraggedKeysPreview" | "setSelectionBox"
+        "canvas" | "getCurrentTime" | "setMap" | "setSelectedKeyIds" | "setDraggedKeysPreview"
       >
     >,
   ) {
@@ -249,7 +244,7 @@ export class DesignCanvasController {
         x1: x,
         t1: time,
       };
-      this.setSelectionBox({ x1: x, t1: time, x2: x, t2: time });
+      this.selectionBox = { x1: x, t1: time, x2: x, t2: time };
     }
   }
 
@@ -262,7 +257,7 @@ export class DesignCanvasController {
 
     const context = this.dragContext;
     if (context.type === "select") {
-      this.setSelectionBox({ x1: context.x1, t1: context.t1, x2: x, t2: this.yToPos(y) });
+      this.selectionBox = { x1: context.x1, t1: context.t1, x2: x, t2: this.yToPos(y) };
     } else {
       // type is 'drag'
       const numLanes = 4;
@@ -332,7 +327,7 @@ export class DesignCanvasController {
           }
         }
       }
-      this.setSelectionBox(null);
+      this.selectionBox = null;
     } else {
       // type is 'drag'
       if (this.draggedKeysPreview) {

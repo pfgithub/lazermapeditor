@@ -26,7 +26,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
 
   // For visual feedback during drag
   const [draggedKeysPreview, setDraggedKeysPreview] = useState<Key[] | null>(null);
-  const [selectionBox, setSelectionBox] = useState<{ x1: number; t1: number; x2: number; t2: number } | null>(null);
 
   const [themeColors, setThemeColors] = useState({
     border: "hsl(217.2 32.6% 17.5%)",
@@ -47,14 +46,12 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         snap,
         selectedKeyIds,
         draggedKeysPreview,
-        selectionBox,
         themeColors,
         activeHolds: activeHoldsRef.current,
         // Callbacks to update component state
         setMap,
         setSelectedKeyIds,
         setDraggedKeysPreview,
-        setSelectionBox,
       });
     } else {
       controllerRef.current.update({
@@ -62,7 +59,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         snap,
         selectedKeyIds,
         draggedKeysPreview,
-        selectionBox,
         themeColors,
         activeHolds: activeHoldsRef.current,
       });
