@@ -266,19 +266,23 @@ export class DesignCanvasController {
         adjustedLaneDelta = numLanes - 1 - maxKey;
       }
 
+      const anchorNote = context.originalKeys.values().next().value as Note | undefined;
+      let timeDeltaToApply = timeDelta;
+
+      if (anchorNote) {
+        const newAnchorTime = anchorNote.startTime + timeDelta;
+        const snappedAnchorTime = findNearestSnap(this.map, newAnchorTime, this.snap);
+        if (snappedAnchorTime !== null) {
+          timeDeltaToApply = snappedAnchorTime - anchorNote.startTime;
+        }
+      }
+
       const newKeys: Note[] = [];
       for (const originalKey of context.originalKeys.values()) {
-        const newStartTime = originalKey.startTime + timeDelta;
-        const snappedStartTime = findNearestSnap(this.map, newStartTime, this.snap);
-
-        if (snappedStartTime === null) continue;
-
-        const snappedTimeDelta = snappedStartTime - originalKey.startTime;
-
         newKeys.push({
           ...originalKey,
-          startTime: originalKey.startTime + snappedTimeDelta,
-          endTime: originalKey.endTime + snappedTimeDelta,
+          startTime: originalKey.startTime + timeDeltaToApply,
+          endTime: originalKey.endTime + timeDeltaToApply,
           key: (originalKey.key + adjustedLaneDelta) as Note["key"],
         });
       }
