@@ -42,6 +42,44 @@ export function App() {
     };
   }, []);
 
+  // Global keybinding for play/pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+
+      // Don't trigger when a text input, button, or the audio player is focused.
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "BUTTON" ||
+          activeEl.tagName === "AUDIO")
+      ) {
+        return;
+      }
+
+      // Prevent repeated toggling when holding space
+      if (e.repeat) return;
+
+      e.preventDefault();
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      if (audio.paused) {
+        audio.play().catch((err) => console.error("Audio play failed:", err));
+      } else {
+        audio.pause();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   // Animation loop for current time
   useEffect(() => {
     if (!isPlaying) return;
