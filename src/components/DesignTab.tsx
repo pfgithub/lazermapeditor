@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { Key, Map } from "@/store";
@@ -22,10 +22,13 @@ interface DesignTabProps {
   setSnap: (snap: Snap) => void;
 }
 
+const getKeyId = (key: Key): string => `${key.startTime}-${key.key}`;
+
 export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: DesignTabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const activeHoldsRef = useRef<Partial<Record<0 | 1 | 2 | 3, number>>>({});
+  const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set());
 
   // Main drawing function, called every frame.
   const draw = useCallback(
@@ -86,6 +89,8 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
         const y_end = posToY(key.endTime);
         const x_start = key.key * laneWidth;
         const color = getColorForSnap(getSnapForTime(map, key.startTime));
+        const keyId = getKeyId(key);
+        const isSelected = selectedKeyIds.has(keyId);
 
         if (key.startTime === key.endTime) {
           // Tap Note
@@ -95,6 +100,12 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
           ctx.moveTo(x_start + 5, y_start);
           ctx.lineTo(x_start + laneWidth - 5, y_start);
           ctx.stroke();
+
+          if (isSelected) {
+            ctx.strokeStyle = "hsl(var(--ring))";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x_start + 3, y_start - 5, laneWidth - 6, 10);
+          }
         } else {
           // Hold Note
           const noteWidth = laneWidth - 10;
@@ -103,6 +114,12 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
           ctx.lineWidth = 2;
           ctx.fillRect(x_start + 5, y_end, noteWidth, y_start - y_end);
           ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
+
+          if (isSelected) {
+            ctx.strokeStyle = "hsl(var(--ring))";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
+          }
         }
       }
 
@@ -117,7 +134,7 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
 
       ctx.restore();
     },
-    [map, snap],
+    [map, snap, selectedKeyIds],
   );
 
   useEffect(() => {
@@ -131,7 +148,16 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
     const handleKeyDown = (e: KeyboardEvent) => {
       const keyIndex = keyMap[e.key.toLowerCase()];
       if (keyIndex === undefined || e.repeat) return;
-      if (document.activeElement?.tagName === "INPUT") return;
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "BUTTON")
+      ) {
+        return;
+      }
 
       if (activeHoldsRef.current[keyIndex] !== undefined) return;
 
@@ -145,7 +171,17 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
     const handleKeyUp = (e: KeyboardEvent) => {
       const keyIndex = keyMap[e.key.toLowerCase()];
       if (keyIndex === undefined) return;
-      if (document.activeElement?.tagName === "INPUT") return;
+
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "BUTTON")
+      ) {
+        return;
+      }
 
       const startTime = activeHoldsRef.current[keyIndex];
       if (startTime === undefined) return;
@@ -176,6 +212,37 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, [map, setMap, currentTime, snap]);
+
+  // Key deletion handler
+  useEffect(() => {
+    const handleDelete = (e: KeyboardEvent) => {
+      if (e.key !== "Backspace" && e.key !== "Delete") return;
+      if (selectedKeyIds.size === 0) return;
+
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "BUTTON")
+      ) {
+        return;
+      }
+
+      e.preventDefault();
+
+      const newKeys = map.keys.filter((key) => !selectedKeyIds.has(getKeyId(key)));
+
+      setMap({ ...map, keys: newKeys });
+      setSelectedKeyIds(new Set());
+    };
+
+    window.addEventListener("keydown", handleDelete);
+    return () => {
+      window.removeEventListener("keydown", handleDelete);
+    };
+  }, [map, setMap, selectedKeyIds]);
 
   // Redraw canvas whenever time changes
   useEffect(() => {
@@ -239,6 +306,78 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
     }
   };
 
+  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const numLanes = 4;
+    const laneWidth = rect.width / numLanes;
+    const lane = Math.floor(x / laneWidth);
+
+    const viewStartTime = currentTime - 0.1;
+    const viewEndTime = currentTime + 1.0;
+
+    const posToY = (lineTime: number) => {
+      return rect.height - ((lineTime - viewStartTime) / (viewEndTime - viewStartTime)) * rect.height;
+    };
+
+    let clickedKey: Key | null = null;
+    let minDistance = Infinity; // distance in pixels on Y axis
+
+    // Iterate over visible keys to find a match
+    for (const key of map.keys) {
+      if (key.key !== lane) continue;
+      if (key.endTime < viewStartTime || key.startTime > viewEndTime) continue;
+
+      const y_start = posToY(key.startTime);
+      const y_end = posToY(key.endTime);
+
+      const isTap = key.startTime === key.endTime;
+      // For taps, give a small clickable height. For holds, check if click is within the rectangle.
+      const isYInRange = isTap
+        ? y >= y_start - 5 && y <= y_start + 5 // 10px height for clicking taps
+        : y >= y_end && y <= y_start;
+
+      if (isYInRange) {
+        const y_center = isTap ? y_start : (y_start + y_end) / 2;
+        const distance = Math.abs(y - y_center);
+        if (distance < minDistance) {
+          minDistance = distance;
+          clickedKey = key;
+        }
+      }
+    }
+
+    if (clickedKey) {
+      const keyId = getKeyId(clickedKey);
+      const newSelection = new Set(selectedKeyIds);
+      const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+
+      if (isMultiSelect) {
+        if (newSelection.has(keyId)) {
+          newSelection.delete(keyId);
+        } else {
+          newSelection.add(keyId);
+        }
+      } else {
+        if (!newSelection.has(keyId)) {
+          newSelection.clear();
+          newSelection.add(keyId);
+        }
+        // If it is already selected, do nothing, to allow for future drag-and-drop.
+      }
+      setSelectedKeyIds(newSelection);
+    } else {
+      if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        setSelectedKeyIds(new Set());
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full gap-2">
       <div className="flex items-center justify-between p-2 bg-card border rounded-lg shrink-0">
@@ -257,7 +396,7 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
         ref={containerRef}
         onWheel={handleWheel}
       >
-        <canvas ref={canvasRef} className="absolute" />
+        <canvas ref={canvasRef} className="absolute" onClick={handleClick} />
       </div>
     </div>
   );
