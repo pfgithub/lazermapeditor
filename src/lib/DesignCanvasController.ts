@@ -40,10 +40,15 @@ export interface DesignCanvasControllerOptions {
   onSelectionChange?: (count: number) => void;
 }
 const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
+  // for two-handed df/jk
   d: 0,
   f: 1,
   j: 2,
   k: 3,
+
+  // for one-hand dfgh
+  g: 2,
+  h: 3,
 };
 
 const themeColors = {
