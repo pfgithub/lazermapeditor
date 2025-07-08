@@ -485,13 +485,8 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
       const boxTop = Math.min(y1, y2);
       const boxBottom = Math.max(y1, y2);
 
-      const viewStartTime = getCurrentTime() - 0.1;
-      const viewEndTime = getCurrentTime() + 1.0;
-
       const selectedKeys: Key[] = [];
       for (const key of map.keys) {
-        if (key.endTime < viewStartTime || key.startTime > viewEndTime) continue;
-
         const keyLeft = key.key * laneWidth;
         const keyRight = (key.key + 1) * laneWidth;
 
