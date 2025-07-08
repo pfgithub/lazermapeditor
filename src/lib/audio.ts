@@ -6,12 +6,10 @@ export class AudioController {
   private isPlaying = false;
   private startTime = 0; // of the context
   private startOffset = 0; // in the buffer
-  private animationFrameId: number | null = null;
 
   // Callbacks for React state updates
   public onPlay: () => void = () => {};
   public onPause: () => void = () => {};
-  public onTimeUpdate: (time: number) => void = () => {};
   public onEnded: () => void = () => {};
   public onBufferLoad: (buffer: AudioBuffer) => void = () => {};
 
@@ -24,7 +22,6 @@ export class AudioController {
   public async load(url: string) {
     if (this.isPlaying) this.pause();
     this.startOffset = 0;
-    this.onTimeUpdate(0);
 
     const response = await fetch(url);
     const arrayBuffer = await response.arrayBuffer();
@@ -47,12 +44,9 @@ export class AudioController {
       // Manual pauses/seeks will set isPlaying to false or replace the node.
       if (this.isPlaying) {
         this.isPlaying = false;
-        if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
-        this.animationFrameId = null;
         this.onPause();
         // Reset to beginning
         this.startOffset = 0;
-        this.onTimeUpdate(0);
         this.onEnded();
       }
     };
@@ -61,15 +55,10 @@ export class AudioController {
     this.startTime = this.audioContext.currentTime;
     this.isPlaying = true;
     this.onPlay();
-    this.loop();
   }
 
   public pause() {
     if (!this.isPlaying || !this.sourceNode) return;
-
-    // Stop the animation loop first
-    if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
-    this.animationFrameId = null;
 
     const elapsedTime = this.audioContext.currentTime - this.startTime;
     this.startOffset += elapsedTime;
@@ -94,7 +83,6 @@ export class AudioController {
       this.pause();
     }
     this.startOffset = newTime;
-    this.onTimeUpdate(newTime);
     if (wasPlaying) {
       this.play();
     }
@@ -114,13 +102,6 @@ export class AudioController {
 
   public getDuration(): number {
     return this.audioBuffer?.duration ?? 0;
-  }
-
-  private loop() {
-    if (this.isPlaying) {
-      this.onTimeUpdate(this.getCurrentTime());
-      this.animationFrameId = requestAnimationFrame(() => this.loop());
-    }
   }
 
   public cleanup() {

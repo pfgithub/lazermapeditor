@@ -45,7 +45,6 @@ export function App() {
 
     controller.onPlay = () => setIsPlaying(true);
     controller.onPause = () => setIsPlaying(false);
-    controller.onTimeUpdate = (time) => setCurrentTime(time);
     controller.onBufferLoad = (buffer) => {
       setAudioBuffer(buffer);
       setDuration(buffer.duration);
@@ -55,6 +54,22 @@ export function App() {
       controller.cleanup();
     };
   }, []);
+
+  // Time update loop
+  useEffect(() => {
+    let animationFrameId: number;
+    if (isPlaying) {
+      const loop = () => {
+        const time = audioControllerRef.current?.getCurrentTime() ?? 0;
+        setCurrentTime(time);
+        animationFrameId = requestAnimationFrame(loop);
+      };
+      loop();
+    }
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [isPlaying]);
 
   // Load song when URL changes
   useEffect(() => {
@@ -128,6 +143,7 @@ export function App() {
 
   const handleSeek = (time: number) => {
     audioControllerRef.current?.seek(time);
+    setCurrentTime(time);
   };
 
   if (!isInitialized) {
