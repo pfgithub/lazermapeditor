@@ -8,5 +8,5 @@ TODO:
   - it lied about doing it twice. so i'll do it myself
 - [x] fix click drag select so it can select stuff off the edge of the screen (rn if you select & scroll it loses the ones off the screen)
 - [ ] play then scroll somewhere. broken!
-- [x] Display notes on the waveform
-- [ ] scroll is inverted, flip it
+- [ ] Display notes on the waveform
+- [x] scroll is inverted, flip it
