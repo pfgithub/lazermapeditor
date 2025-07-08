@@ -7,14 +7,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "./store";
 import { WaveformDisplay } from "./components/WaveformDisplay";
 import type { Snap } from "./lib/timingPoints";
+import { AudioController } from "./lib/audio";
+import { Button } from "./components/ui/button";
+import { Pause, Play } from "lucide-react";
 
-// Types are now in src/store.ts
+function formatTime(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
 
 export function App() {
   const { map, song, setMap, setSongFile, loadFromDb, isInitialized } = useAppStore();
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioControllerRef = useRef<AudioController | null>(null);
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [activeTab, setActiveTab] = useState("metadata");
   const [designSnap, setDesignSnap] = useState<Snap>(4);
 
@@ -27,6 +37,43 @@ export function App() {
   useEffect(() => {
     loadFromDb();
   }, [loadFromDb]);
+
+  // Initialize AudioController
+  useEffect(() => {
+    const controller = new AudioController();
+    audioControllerRef.current = controller;
+
+    controller.onPlay = () => setIsPlaying(true);
+    controller.onPause = () => setIsPlaying(false);
+    controller.onTimeUpdate = (time) => setCurrentTime(time);
+    controller.onBufferLoad = (buffer) => {
+      setAudioBuffer(buffer);
+      setDuration(buffer.duration);
+    };
+
+    return () => {
+      controller.cleanup();
+    };
+  }, []);
+
+  // Load song when URL changes
+  useEffect(() => {
+    const controller = audioControllerRef.current;
+    if (song?.url && controller) {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
+      setAudioBuffer(null);
+      controller.load(song.url).catch((err) => {
+        console.error("Failed to load audio", err);
+        // TODO: show an error to the user
+      });
+    } else {
+      setAudioBuffer(null);
+      setDuration(0);
+      setCurrentTime(0);
+    }
+  }, [song?.url]);
 
   // Global cleanup for blob URL on app close/refresh
   useEffect(() => {
@@ -54,8 +101,7 @@ export function App() {
         (activeEl.tagName === "INPUT" ||
           activeEl.tagName === "TEXTAREA" ||
           activeEl.tagName === "SELECT" ||
-          activeEl.tagName === "BUTTON" ||
-          activeEl.tagName === "AUDIO")
+          activeEl.tagName === "BUTTON")
       ) {
         return;
       }
@@ -64,13 +110,13 @@ export function App() {
       if (e.repeat) return;
 
       e.preventDefault();
-      const audio = audioRef.current;
-      if (!audio) return;
+      const controller = audioControllerRef.current;
+      if (!controller) return;
 
-      if (audio.paused) {
-        audio.play().catch((err) => console.error("Audio play failed:", err));
+      if (controller.getIsPlaying()) {
+        controller.pause();
       } else {
-        audio.pause();
+        controller.play();
       }
     };
 
@@ -80,29 +126,8 @@ export function App() {
     };
   }, []);
 
-  // Animation loop for current time
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    let animationFrameId: number;
-    const loop = () => {
-      if (audioRef.current) {
-        setCurrentTime(audioRef.current.currentTime);
-      }
-      animationFrameId = requestAnimationFrame(loop);
-    };
-    animationFrameId = requestAnimationFrame(loop);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [isPlaying]);
-
-  // Sync state with audio element when seeking manually
-  const handleTimeUpdate = () => {
-    if (audioRef.current && !isPlaying) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
+  const handleSeek = (time: number) => {
+    audioControllerRef.current?.seek(time);
   };
 
   if (!isInitialized) {
@@ -129,34 +154,61 @@ export function App() {
           <MetadataTab song={song} setSong={setSongFile} />
         </TabsContent>
         <TabsContent value="design" className="flex-grow min-h-0">
-          <DesignTab map={map} setMap={setMap} audioRef={audioRef} snap={designSnap} setSnap={setDesignSnap} />
+          <DesignTab
+            map={map}
+            setMap={setMap}
+            currentTime={currentTime}
+            seek={handleSeek}
+            snap={designSnap}
+            setSnap={setDesignSnap}
+          />
         </TabsContent>
         <TabsContent value="timing" className="flex-grow min-h-0 bg-card rounded-lg border">
-          <TimingTab map={map} setMap={setMap} audioRef={audioRef} songUrl={song?.url ?? null} />
+          <TimingTab map={map} setMap={setMap} currentTime={currentTime} songUrl={song?.url ?? null} />
         </TabsContent>
       </Tabs>
 
       <footer className="shrink-0 flex flex-col gap-2">
         <div className="h-24">
           <WaveformDisplay
-            songUrl={song?.url}
+            audioBuffer={audioBuffer}
             currentTime={currentTime}
             map={map}
             snap={snapForWaveform}
           />
         </div>
         {song?.url ? (
-          <audio
-            ref={audioRef}
-            key={song.url}
-            src={song.url}
-            controls
-            className="w-full"
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onSeeked={handleTimeUpdate}
-            onTimeUpdate={handleTimeUpdate}
-          />
+          <div className="flex items-center gap-4 bg-muted/80 p-2 rounded-md h-[54px]">
+            <Button
+              onClick={() => {
+                const controller = audioControllerRef.current;
+                if (controller) {
+                  controller.getIsPlaying() ? controller.pause() : controller.play();
+                }
+              }}
+              size="icon"
+              variant="ghost"
+              className="h-10 w-10"
+            >
+              {isPlaying ? (
+                <Pause className="h-5 w-5" />
+              ) : (
+                <Play className="h-5 w-5" />
+              )}
+            </Button>
+            <div className="text-sm font-mono w-28 text-center">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </div>
+            <input
+              type="range"
+              min="0"
+              max={duration || 1}
+              value={currentTime}
+              step="0.01"
+              className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
+              onChange={(e) => handleSeek(parseFloat(e.target.value))}
+            />
+          </div>
         ) : (
           <div className="text-center text-muted-foreground p-4 bg-muted rounded-md h-[54px] flex items-center justify-center">
             Please select a song in the Metadata tab.
