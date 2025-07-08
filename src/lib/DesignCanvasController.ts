@@ -1,4 +1,3 @@
-```ts
 import type { Note, Beatmap } from "@/store";
 import {
   calculateTimingPointsInRange,
@@ -635,4 +634,3 @@ export class DesignCanvasController {
     ctx.restore();
   }
 }
-```
