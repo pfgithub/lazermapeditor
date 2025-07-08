@@ -113,7 +113,7 @@ export function App() {
       const activeEl = document.activeElement;
       if (
         activeEl &&
-        (activeEl.tagName === "INPUT" ||
+        ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
           activeEl.tagName === "TEXTAREA" ||
           activeEl.tagName === "SELECT" ||
           activeEl.tagName === "BUTTON")
