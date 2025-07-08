@@ -30,9 +30,21 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const activeHoldsRef = useRef<Partial<Record<0 | 1 | 2 | 3, number>>>({});
   const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set());
 
-  // State for box selection
+  // State for dragging notes or box selection
+  const dragContextRef = useRef<{
+    type: "select";
+    x1: number;
+    t1: number;
+  } | {
+    type: "drag";
+    initialMouseTime: number;
+    initialMouseLane: number;
+    originalKeys: Map<string, Key>; // Map from key ID to original key object
+  } | null>(null);
+
+  // For visual feedback during drag
+  const [draggedKeysPreview, setDraggedKeysPreview] = useState<Key[] | null>(null);
   const [selectionBox, setSelectionBox] = useState<{ x1: number; t1: number; x2: number; t2: number } | null>(null);
-  const isDraggingRef = useRef(false);
 
   const [themeColors, setThemeColors] = useState({
     border: "hsl(217.2 32.6% 17.5%)",
@@ -69,6 +81,50 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
       return lineTime;
     },
     [getCurrentTime()],
+  );
+
+  const findKeyAt = useCallback(
+    (x: number, y: number): Key | null => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+
+      const rect = canvas.getBoundingClientRect();
+      const numLanes = 4;
+      const laneWidth = rect.width / numLanes;
+      const lane = Math.floor(x / laneWidth);
+
+      const viewStartTime = getCurrentTime() - 0.1;
+      const viewEndTime = getCurrentTime() + 1.0;
+
+      let clickedKey: Key | null = null;
+      let minDistance = Infinity; // distance in pixels on Y axis
+
+      // Iterate over visible keys to find a match
+      for (const key of map.keys) {
+        if (key.key !== lane) continue;
+        if (key.endTime < viewStartTime || key.startTime > viewEndTime) continue;
+
+        const y_start = posToY(key.startTime);
+        const y_end = posToY(key.endTime);
+
+        const isTap = key.startTime === key.endTime;
+        // For taps, give a small clickable height. For holds, check if click is within the rectangle.
+        const isYInRange = isTap
+          ? y >= y_start - 5 && y <= y_start + 5 // 10px height for clicking taps
+          : y >= y_end && y <= y_start;
+
+        if (isYInRange) {
+          const y_center = isTap ? y_start : (y_start + y_end) / 2;
+          const distance = Math.abs(y - y_center);
+          if (distance < minDistance) {
+            minDistance = distance;
+            clickedKey = key;
+          }
+        }
+      }
+      return clickedKey;
+    },
+    [map.keys, posToY, getCurrentTime],
   );
 
   // Main drawing function, called every frame.
@@ -119,6 +175,12 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
 
       // --- Draw Keys ---
       for (const key of map.keys) {
+        const keyId = getKeyId(key);
+        // If this key is being dragged, we draw the preview version later.
+        if (draggedKeysPreview && dragContextRef.current?.type === "drag" && dragContextRef.current.originalKeys.has(keyId)) {
+          continue;
+        }
+
         if (key.endTime < startTime || key.startTime > endTime) {
           continue;
         }
@@ -126,7 +188,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         const y_end = posToY(key.endTime);
         const x_start = key.key * laneWidth;
         const color = getColorForSnap(getSnapForTime(map, key.startTime));
-        const keyId = getKeyId(key);
         const isSelected = selectedKeyIds.has(keyId);
 
         if (key.startTime === key.endTime) {
@@ -153,6 +214,41 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
           ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
 
           if (isSelected) {
+            ctx.strokeStyle = themeColors.ring;
+            ctx.lineWidth = 4;
+            ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
+          }
+        }
+      }
+      
+      // --- Draw Dragged Keys Preview ---
+      if (draggedKeysPreview) {
+        for (const key of draggedKeysPreview) {
+          if (key.endTime < startTime || key.startTime > endTime) {
+            continue;
+          }
+          const y_start = posToY(key.startTime);
+          const y_end = posToY(key.endTime);
+          const x_start = key.key * laneWidth;
+          const color = getColorForSnap(getSnapForTime(map, key.startTime));
+
+          if (key.startTime === key.endTime) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(x_start + 5, y_start);
+            ctx.lineTo(x_start + laneWidth - 5, y_start);
+            ctx.stroke();
+            ctx.strokeStyle = themeColors.ring;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x_start + 3, y_start - 5, laneWidth - 6, 10);
+          } else {
+            const noteWidth = laneWidth - 10;
+            ctx.fillStyle = color + "80";
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.fillRect(x_start + 5, y_end, noteWidth, y_start - y_end);
+            ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
             ctx.strokeStyle = themeColors.ring;
             ctx.lineWidth = 4;
             ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
@@ -187,7 +283,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
 
       ctx.restore();
     },
-    [map, snap, selectedKeyIds, posToY, selectionBox, themeColors],
+    [map, snap, selectedKeyIds, posToY, selectionBox, themeColors, draggedKeysPreview],
   );
 
   useEffect(() => {
@@ -419,136 +515,179 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
     [map.keys, posToY, getCurrentTime],
   );
 
-  const handleClick = useCallback(
+  const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const numLanes = 4;
+      const laneWidth = rect.width / numLanes;
 
+      const clickedKey = findKeyAt(x, y);
+      const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+
+      if (clickedKey) {
+        const keyId = getKeyId(clickedKey);
+        const isSelected = selectedKeyIds.has(keyId);
+        let nextSelectedKeyIds = new Set(selectedKeyIds);
+        let selectionChanged = false;
+
+        if (isMultiSelect) {
+          if (isSelected) {
+            nextSelectedKeyIds.delete(keyId);
+          } else {
+            nextSelectedKeyIds.add(keyId);
+          }
+          selectionChanged = true;
+        } else {
+          if (!isSelected || selectedKeyIds.size > 1) {
+            nextSelectedKeyIds = new Set([keyId]);
+            selectionChanged = true;
+          }
+        }
+
+        if (selectionChanged) {
+          setSelectedKeyIds(nextSelectedKeyIds);
+        }
+
+        // Only start a drag if we're not deselecting with a multi-select key.
+        if (isMultiSelect && isSelected) {
+          dragContextRef.current = null;
+        } else {
+          const keysToDrag = new Map<string, Key>();
+          map.keys.forEach((k) => {
+            if (nextSelectedKeyIds.has(getKeyId(k))) {
+              keysToDrag.set(getKeyId(k), k);
+            }
+          });
+
+          dragContextRef.current = {
+            type: "drag",
+            initialMouseTime: yToPos(y),
+            initialMouseLane: Math.floor(x / laneWidth),
+            originalKeys: keysToDrag,
+          };
+        }
+      } else {
+        // No key clicked, start box selection
+        if (!isMultiSelect) {
+          setSelectedKeyIds(new Set());
+        }
+        dragContextRef.current = {
+          type: "select",
+          x1: x,
+          t1: yToPos(y),
+        };
+        setSelectionBox({ x1: x, t1: yToPos(y), x2: x, t2: yToPos(y) });
+      }
+    },
+    [findKeyAt, map.keys, selectedKeyIds, yToPos, snap],
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!dragContextRef.current) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      const numLanes = 4;
-      const laneWidth = rect.width / numLanes;
-      const lane = Math.floor(x / laneWidth);
-
-      const viewStartTime = getCurrentTime() - 0.1;
-      const viewEndTime = getCurrentTime() + 1.0;
-
-      let clickedKey: Key | null = null;
-      let minDistance = Infinity; // distance in pixels on Y axis
-
-      // Iterate over visible keys to find a match
-      for (const key of map.keys) {
-        if (key.key !== lane) continue;
-        if (key.endTime < viewStartTime || key.startTime > viewEndTime) continue;
-
-        const y_start = posToY(key.startTime);
-        const y_end = posToY(key.endTime);
-
-        const isTap = key.startTime === key.endTime;
-        // For taps, give a small clickable height. For holds, check if click is within the rectangle.
-        const isYInRange = isTap
-          ? y >= y_start - 5 && y <= y_start + 5 // 10px height for clicking taps
-          : y >= y_end && y <= y_start;
-
-        if (isYInRange) {
-          const y_center = isTap ? y_start : (y_start + y_end) / 2;
-          const distance = Math.abs(y - y_center);
-          if (distance < minDistance) {
-            minDistance = distance;
-            clickedKey = key;
-          }
-        }
-      }
-
-      if (clickedKey) {
-        const keyId = getKeyId(clickedKey);
-        const newSelection = new Set(selectedKeyIds);
-        const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
-
-        if (isMultiSelect) {
-          if (newSelection.has(keyId)) {
-            newSelection.delete(keyId);
-          } else {
-            newSelection.add(keyId);
-          }
-        } else {
-          if (!newSelection.has(keyId)) {
-            newSelection.clear();
-            newSelection.add(keyId);
-          }
-          // If it is already selected, do nothing, to allow for future drag-and-drop.
-        }
-        setSelectedKeyIds(newSelection);
+      const context = dragContextRef.current;
+      if (context.type === "select") {
+        setSelectionBox((prev) => {
+          if (!prev) return null;
+          return { ...prev, x2: x, t2: yToPos(y) };
+        });
       } else {
-        if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
-          setSelectedKeyIds(new Set());
+        // type is 'drag'
+        const numLanes = 4;
+        const laneWidth = rect.width / numLanes;
+        const currentTime = yToPos(y);
+        const currentLane = Math.floor(x / laneWidth);
+
+        const timeDelta = currentTime - context.initialMouseTime;
+        const laneDelta = currentLane - context.initialMouseLane;
+
+        const minKey = Math.min(...Array.from(context.originalKeys.values()).map((k) => k.key));
+        const maxKey = Math.max(...Array.from(context.originalKeys.values()).map((k) => k.key));
+
+        let adjustedLaneDelta = laneDelta;
+        if (minKey + laneDelta < 0) {
+          adjustedLaneDelta = -minKey;
         }
+        if (maxKey + laneDelta >= numLanes) {
+          adjustedLaneDelta = numLanes - 1 - maxKey;
+        }
+
+        const newKeys: Key[] = [];
+        for (const originalKey of context.originalKeys.values()) {
+          const newStartTime = originalKey.startTime + timeDelta;
+          const snappedStartTime = findNearestSnap(map, newStartTime, snap);
+
+          if (snappedStartTime === null) continue;
+
+          const snappedTimeDelta = snappedStartTime - originalKey.startTime;
+
+          newKeys.push({
+            ...originalKey,
+            startTime: originalKey.startTime + snappedTimeDelta,
+            endTime: originalKey.endTime + snappedTimeDelta,
+            key: (originalKey.key + adjustedLaneDelta) as Key["key"],
+          });
+        }
+        setDraggedKeysPreview(newKeys);
       }
     },
-    [map.keys, selectedKeyIds, posToY, getCurrentTime],
+    [yToPos, map, snap],
   );
-
-  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    isDraggingRef.current = true;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setSelectionBox({ x1: x, t1: yToPos(y), x2: x, t2: yToPos(y) });
-  }, [yToPos]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setSelectionBox((prev) => {
-      if (!prev) return null;
-      return { ...prev, x2: x, t2: yToPos(y) };
-    });
-  }, [yToPos]);
 
   const handleMouseUp = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isDraggingRef.current) return;
-      isDraggingRef.current = false;
+      if (!dragContextRef.current) return;
+      const context = dragContextRef.current;
 
-      if (!selectionBox) return;
+      if (context.type === "select") {
+        if (selectionBox) {
+          const { x1, t1, x2, t2 } = selectionBox;
+          const y1 = posToY(t1);
+          const y2 = posToY(t2);
+          const dragDistance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 
-      const { x1, t1, x2, t2 } = selectionBox;
-      const y1 = posToY(t1);
-      const y2 = posToY(t2);
-      const dragDistance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+          if (dragDistance > 5) {
+            const keysInBox = getKeysInBox(x1, t1, x2, t2);
+            const keyIdsInBox = new Set(keysInBox.map(getKeyId));
 
-      if (dragDistance < 5) {
-        // It's a click
-        handleClick(e as any);
-      } else {
-        // It's a drag-select
-        const keysInBox = getKeysInBox(x1, t1, x2, t2);
-        const keyIdsInBox = new Set(keysInBox.map(getKeyId));
-
-        const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
-        if (isMultiSelect) {
-          const newSelection = new Set(selectedKeyIds);
-          keyIdsInBox.forEach((id) => newSelection.add(id));
-          setSelectedKeyIds(newSelection);
-        } else {
-          setSelectedKeyIds(keyIdsInBox);
+            const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+            if (isMultiSelect) {
+              const newSelection = new Set(selectedKeyIds);
+              keyIdsInBox.forEach((id) => newSelection.add(id));
+              setSelectedKeyIds(newSelection);
+            } else {
+              setSelectedKeyIds(keyIdsInBox);
+            }
+          }
         }
+        setSelectionBox(null);
+      } else {
+        // type is 'drag'
+        if (draggedKeysPreview) {
+          const draggedKeyOriginalIds = new Set(context.originalKeys.keys());
+          const otherKeys = map.keys.filter((k) => !draggedKeyOriginalIds.has(getKeyId(k)));
+
+          const newKeys = [...otherKeys, ...draggedKeysPreview].sort((a, b) => a.startTime - b.startTime);
+          setMap({ ...map, keys: newKeys });
+
+          const newSelectedKeyIds = new Set(draggedKeysPreview.map(getKeyId));
+          setSelectedKeyIds(newSelectedKeyIds);
+        }
+        setDraggedKeysPreview(null);
       }
-      setSelectionBox(null);
+      dragContextRef.current = null;
     },
-    [selectionBox, handleClick, getKeysInBox, selectedKeyIds, posToY],
+    [selectionBox, getKeysInBox, selectedKeyIds, map, setMap, draggedKeysPreview, posToY],
   );
 
   return (
