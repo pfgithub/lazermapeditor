@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+```tsx
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { Key, Map } from "@/store";
@@ -24,18 +25,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const activeHoldsRef = useRef<Partial<Record<0 | 1 | 2 | 3, number>>>({});
   const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set());
 
-  // State for dragging notes or box selection
-  const dragContextRef = useRef<{
-    type: "select";
-    x1: number;
-    t1: number;
-  } | {
-    type: "drag";
-    initialMouseTime: number;
-    initialMouseLane: number;
-    originalKeys: Map<string, Key>; // Map from key ID to original key object
-  } | null>(null);
-
   // For visual feedback during drag
   const [draggedKeysPreview, setDraggedKeysPreview] = useState<Key[] | null>(null);
   const [selectionBox, setSelectionBox] = useState<{ x1: number; t1: number; x2: number; t2: number } | null>(null);
@@ -59,10 +48,14 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         snap,
         selectedKeyIds,
         draggedKeysPreview,
-        draggedOriginalKeys: null,
         selectionBox,
         themeColors,
         activeHolds: activeHoldsRef.current,
+        // Callbacks to update component state
+        setMap,
+        setSelectedKeyIds,
+        setDraggedKeysPreview,
+        setSelectionBox,
       });
     } else {
       controllerRef.current.update({
@@ -70,13 +63,12 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         snap,
         selectedKeyIds,
         draggedKeysPreview,
-        draggedOriginalKeys: dragContextRef.current?.type === "drag" ? dragContextRef.current.originalKeys : null,
         selectionBox,
         themeColors,
         activeHolds: activeHoldsRef.current,
       });
     }
-  });
+  }); // Runs on every render to keep controller props in sync
 
   // Main drawing loop
   useEffect(() => {
@@ -243,187 +235,15 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
     }
   };
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const controller = controllerRef.current;
-      const canvas = canvasRef.current;
-      if (!controller || !canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const numLanes = 4;
-      const laneWidth = rect.width / numLanes;
-
-      const clickedKey = controller.findKeyAt(x, y);
-      const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
-
-      if (clickedKey) {
-        const keyId = getKeyId(clickedKey);
-        const isSelected = selectedKeyIds.has(keyId);
-        let nextSelectedKeyIds = new Set(selectedKeyIds);
-        let selectionChanged = false;
-
-        if (isMultiSelect) {
-          if (isSelected) {
-            nextSelectedKeyIds.delete(keyId);
-          } else {
-            nextSelectedKeyIds.add(keyId);
-          }
-          selectionChanged = true;
-        } else {
-          if (!isSelected || selectedKeyIds.size > 1) {
-            nextSelectedKeyIds = new Set([keyId]);
-            selectionChanged = true;
-          }
-        }
-
-        if (selectionChanged) {
-          setSelectedKeyIds(nextSelectedKeyIds);
-        }
-
-        // Only start a drag if we're not deselecting with a multi-select key.
-        if (isMultiSelect && isSelected) {
-          dragContextRef.current = null;
-        } else {
-          const keysToDrag = new Map<string, Key>();
-          map.keys.forEach((k) => {
-            if (nextSelectedKeyIds.has(getKeyId(k))) {
-              keysToDrag.set(getKeyId(k), k);
-            }
-          });
-
-          dragContextRef.current = {
-            type: "drag",
-            initialMouseTime: controller.yToPos(y),
-            initialMouseLane: Math.floor(x / laneWidth),
-            originalKeys: keysToDrag,
-          };
-        }
-      } else {
-        // No key clicked, start box selection
-        if (!isMultiSelect) {
-          setSelectedKeyIds(new Set());
-        }
-        const time = controller.yToPos(y);
-        dragContextRef.current = {
-          type: "select",
-          x1: x,
-          t1: time,
-        };
-        setSelectionBox({ x1: x, t1: time, x2: x, t2: time });
-      }
-    },
-    [map.keys, selectedKeyIds],
-  );
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const controller = controllerRef.current;
-      if (!dragContextRef.current || !controller) return;
-
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      const context = dragContextRef.current;
-      if (context.type === "select") {
-        setSelectionBox((prev) => {
-          if (!prev) return null;
-          return { ...prev, x2: x, t2: controller.yToPos(y) };
-        });
-      } else {
-        // type is 'drag'
-        const numLanes = 4;
-        const laneWidth = rect.width / numLanes;
-        const currentTime = controller.yToPos(y);
-        const currentLane = Math.floor(x / laneWidth);
-
-        const timeDelta = currentTime - context.initialMouseTime;
-        const laneDelta = currentLane - context.initialMouseLane;
-
-        const minKey = Math.min(...Array.from(context.originalKeys.values()).map((k) => k.key));
-        const maxKey = Math.max(...Array.from(context.originalKeys.values()).map((k) => k.key));
-
-        let adjustedLaneDelta = laneDelta;
-        if (minKey + laneDelta < 0) {
-          adjustedLaneDelta = -minKey;
-        }
-        if (maxKey + laneDelta >= numLanes) {
-          adjustedLaneDelta = numLanes - 1 - maxKey;
-        }
-
-        const newKeys: Key[] = [];
-        for (const originalKey of context.originalKeys.values()) {
-          const newStartTime = originalKey.startTime + timeDelta;
-          const snappedStartTime = findNearestSnap(map, newStartTime, snap);
-
-          if (snappedStartTime === null) continue;
-
-          const snappedTimeDelta = snappedStartTime - originalKey.startTime;
-
-          newKeys.push({
-            ...originalKey,
-            startTime: originalKey.startTime + snappedTimeDelta,
-            endTime: originalKey.endTime + snappedTimeDelta,
-            key: (originalKey.key + adjustedLaneDelta) as Key["key"],
-          });
-        }
-        setDraggedKeysPreview(newKeys);
-      }
-    },
-    [map, snap],
-  );
-
-  const handleMouseUp = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const controller = controllerRef.current;
-      if (!dragContextRef.current || !controller) return;
-
-      const context = dragContextRef.current;
-
-      if (context.type === "select") {
-        if (selectionBox) {
-          const { x1, t1, x2, t2 } = selectionBox;
-          const y1 = controller.posToY(t1);
-          const y2 = controller.posToY(t2);
-          const dragDistance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-
-          if (dragDistance > 5) {
-            const keysInBox = controller.getKeysInBox(x1, t1, x2, t2);
-            const keyIdsInBox = new Set(keysInBox.map(getKeyId));
-
-            const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
-            if (isMultiSelect) {
-              const newSelection = new Set(selectedKeyIds);
-              keyIdsInBox.forEach((id) => newSelection.add(id));
-              setSelectedKeyIds(newSelection);
-            } else {
-              setSelectedKeyIds(keyIdsInBox);
-            }
-          }
-        }
-        setSelectionBox(null);
-      } else {
-        // type is 'drag'
-        if (draggedKeysPreview) {
-          const draggedKeyOriginalIds = new Set(context.originalKeys.keys());
-          const otherKeys = map.keys.filter((k) => !draggedKeyOriginalIds.has(getKeyId(k)));
-
-          const newKeys = [...otherKeys, ...draggedKeysPreview].sort((a, b) => a.startTime - b.startTime);
-          setMap({ ...map, keys: newKeys });
-
-          const newSelectedKeyIds = new Set(draggedKeysPreview.map(getKeyId));
-          setSelectedKeyIds(newSelectedKeyIds);
-        }
-        setDraggedKeysPreview(null);
-      }
-      dragContextRef.current = null;
-    },
-    [selectionBox, selectedKeyIds, map, setMap, draggedKeysPreview],
-  );
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    controllerRef.current?.handleMouseDown(e.nativeEvent);
+  };
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    controllerRef.current?.handleMouseMove(e.nativeEvent);
+  };
+  const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    controllerRef.current?.handleMouseUp(e.nativeEvent);
+  };
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -450,3 +270,4 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
     </div>
   );
 }
+```

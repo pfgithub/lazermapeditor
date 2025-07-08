@@ -1,3 +1,4 @@
+```ts
 import type { Key, Map } from "@/store";
 import {
   calculateTimingPointsInRange,
@@ -9,6 +10,22 @@ import {
 
 const getKeyId = (key: Key): string => `${key.startTime}-${key.key}`;
 
+type SetStateAction<S> = S | ((prevState: S) => S);
+
+type DragContext =
+  | {
+      type: "select";
+      x1: number;
+      t1: number;
+    }
+  | {
+      type: "drag";
+      initialMouseTime: number;
+      initialMouseLane: number;
+      originalKeys: Map<string, Key>; // Map from key ID to original key object
+    }
+  | null;
+
 export interface DesignCanvasControllerOptions {
   canvas: HTMLCanvasElement;
   map: Map;
@@ -16,7 +33,6 @@ export interface DesignCanvasControllerOptions {
   snap: Snap;
   selectedKeyIds: Set<string>;
   draggedKeysPreview: Key[] | null;
-  draggedOriginalKeys: Map<string, Key> | null;
   selectionBox: { x1: number; t1: number; x2: number; t2: number } | null;
   themeColors: {
     border: string;
@@ -24,6 +40,10 @@ export interface DesignCanvasControllerOptions {
     ringTransparent: string;
   };
   activeHolds: Partial<Record<0 | 1 | 2 | 3, number>>;
+  setMap: (map: Map) => void;
+  setSelectedKeyIds: (value: SetStateAction<Set<string>>) => void;
+  setDraggedKeysPreview: (keys: Key[] | null) => void;
+  setSelectionBox: (box: { x1: number; t1: number; x2: number; t2: number } | null) => void;
 }
 
 export class DesignCanvasController {
@@ -34,10 +54,16 @@ export class DesignCanvasController {
   private snap: Snap;
   private selectedKeyIds: Set<string>;
   private draggedKeysPreview: Key[] | null;
-  private draggedOriginalKeys: Map<string, Key> | null;
   private selectionBox: { x1: number; t1: number; x2: number; t2: number } | null;
   private themeColors: { border: string; ring: string; ringTransparent: string };
   private activeHolds: Partial<Record<0 | 1 | 2 | 3, number>>;
+
+  private setMap: (map: Map) => void;
+  private setSelectedKeyIds: (value: SetStateAction<Set<string>>) => void;
+  private setDraggedKeysPreview: (keys: Key[] | null) => void;
+  private setSelectionBox: (box: { x1: number; t1: number; x2: number; t2: number } | null) => void;
+
+  private dragContext: DragContext = null;
 
   constructor(options: DesignCanvasControllerOptions) {
     this.canvas = options.canvas;
@@ -52,13 +78,24 @@ export class DesignCanvasController {
     this.snap = options.snap;
     this.selectedKeyIds = options.selectedKeyIds;
     this.draggedKeysPreview = options.draggedKeysPreview;
-    this.draggedOriginalKeys = options.draggedOriginalKeys;
     this.selectionBox = options.selectionBox;
     this.themeColors = options.themeColors;
     this.activeHolds = options.activeHolds;
+
+    this.setMap = options.setMap;
+    this.setSelectedKeyIds = options.setSelectedKeyIds;
+    this.setDraggedKeysPreview = options.setDraggedKeysPreview;
+    this.setSelectionBox = options.setSelectionBox;
   }
 
-  public update(options: Partial<Omit<DesignCanvasControllerOptions, "canvas" | "getCurrentTime">>) {
+  public update(
+    options: Partial<
+      Omit<
+        DesignCanvasControllerOptions,
+        "canvas" | "getCurrentTime" | "setMap" | "setSelectedKeyIds" | "setDraggedKeysPreview" | "setSelectionBox"
+      >
+    >,
+  ) {
     Object.assign(this, options);
   }
 
@@ -150,6 +187,170 @@ export class DesignCanvasController {
     return selectedKeys;
   }
 
+  public handleMouseDown(e: MouseEvent) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const numLanes = 4;
+    const laneWidth = rect.width / numLanes;
+
+    const clickedKey = this.findKeyAt(x, y);
+    const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+
+    if (clickedKey) {
+      const keyId = getKeyId(clickedKey);
+      const isSelected = this.selectedKeyIds.has(keyId);
+      let nextSelectedKeyIds = new Set(this.selectedKeyIds);
+      let selectionChanged = false;
+
+      if (isMultiSelect) {
+        if (isSelected) {
+          nextSelectedKeyIds.delete(keyId);
+        } else {
+          nextSelectedKeyIds.add(keyId);
+        }
+        selectionChanged = true;
+      } else {
+        if (!isSelected || this.selectedKeyIds.size > 1) {
+          nextSelectedKeyIds = new Set([keyId]);
+          selectionChanged = true;
+        }
+      }
+
+      if (selectionChanged) {
+        this.setSelectedKeyIds(nextSelectedKeyIds);
+      }
+
+      // Only start a drag if we're not deselecting with a multi-select key.
+      if (isMultiSelect && isSelected) {
+        this.dragContext = null;
+      } else {
+        const keysToDrag = new Map<string, Key>();
+        this.map.keys.forEach((k) => {
+          if (nextSelectedKeyIds.has(getKeyId(k))) {
+            keysToDrag.set(getKeyId(k), k);
+          }
+        });
+
+        this.dragContext = {
+          type: "drag",
+          initialMouseTime: this.yToPos(y),
+          initialMouseLane: Math.floor(x / laneWidth),
+          originalKeys: keysToDrag,
+        };
+      }
+    } else {
+      // No key clicked, start box selection
+      if (!isMultiSelect) {
+        this.setSelectedKeyIds(new Set());
+      }
+      const time = this.yToPos(y);
+      this.dragContext = {
+        type: "select",
+        x1: x,
+        t1: time,
+      };
+      this.setSelectionBox({ x1: x, t1: time, x2: x, t2: time });
+    }
+  }
+
+  public handleMouseMove(e: MouseEvent) {
+    if (!this.dragContext) return;
+
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const context = this.dragContext;
+    if (context.type === "select") {
+      this.setSelectionBox({ x1: context.x1, t1: context.t1, x2: x, t2: this.yToPos(y) });
+    } else {
+      // type is 'drag'
+      const numLanes = 4;
+      const laneWidth = rect.width / numLanes;
+      const currentTime = this.yToPos(y);
+      const currentLane = Math.floor(x / laneWidth);
+
+      const timeDelta = currentTime - context.initialMouseTime;
+      const laneDelta = currentLane - context.initialMouseLane;
+
+      const minKey = Math.min(...Array.from(context.originalKeys.values()).map((k) => k.key));
+      const maxKey = Math.max(...Array.from(context.originalKeys.values()).map((k) => k.key));
+
+      let adjustedLaneDelta = laneDelta;
+      if (minKey + laneDelta < 0) {
+        adjustedLaneDelta = -minKey;
+      }
+      if (maxKey + laneDelta >= numLanes) {
+        adjustedLaneDelta = numLanes - 1 - maxKey;
+      }
+
+      const newKeys: Key[] = [];
+      for (const originalKey of context.originalKeys.values()) {
+        const newStartTime = originalKey.startTime + timeDelta;
+        const snappedStartTime = findNearestSnap(this.map, newStartTime, this.snap);
+
+        if (snappedStartTime === null) continue;
+
+        const snappedTimeDelta = snappedStartTime - originalKey.startTime;
+
+        newKeys.push({
+          ...originalKey,
+          startTime: originalKey.startTime + snappedTimeDelta,
+          endTime: originalKey.endTime + snappedTimeDelta,
+          key: (originalKey.key + adjustedLaneDelta) as Key["key"],
+        });
+      }
+      this.setDraggedKeysPreview(newKeys);
+    }
+  }
+
+  public handleMouseUp(e: MouseEvent) {
+    if (!this.dragContext) return;
+
+    const context = this.dragContext;
+
+    if (context.type === "select") {
+      if (this.selectionBox) {
+        const { x1, t1, x2, t2 } = this.selectionBox;
+        const y1 = this.posToY(t1);
+        const y2 = this.posToY(t2);
+        const dragDistance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+        if (dragDistance > 5) {
+          const keysInBox = this.getKeysInBox(x1, t1, x2, t2);
+          const keyIdsInBox = new Set(keysInBox.map(getKeyId));
+
+          const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+          if (isMultiSelect) {
+            this.setSelectedKeyIds((prev) => {
+              const newSelection = new Set(prev);
+              keyIdsInBox.forEach((id) => newSelection.add(id));
+              return newSelection;
+            });
+          } else {
+            this.setSelectedKeyIds(keyIdsInBox);
+          }
+        }
+      }
+      this.setSelectionBox(null);
+    } else {
+      // type is 'drag'
+      if (this.draggedKeysPreview) {
+        const draggedKeyOriginalIds = new Set(context.originalKeys.keys());
+        const otherKeys = this.map.keys.filter((k) => !draggedKeyOriginalIds.has(getKeyId(k)));
+
+        const newKeys = [...otherKeys, ...this.draggedKeysPreview].sort((a, b) => a.startTime - b.startTime);
+        this.setMap({ ...this.map, keys: newKeys });
+
+        const newSelectedKeyIds = new Set(this.draggedKeysPreview.map(getKeyId));
+        this.setSelectedKeyIds(newSelectedKeyIds);
+      }
+      this.setDraggedKeysPreview(null);
+    }
+    this.dragContext = null;
+  }
+
   public draw() {
     const ctx = this.ctx;
     const { width, height } = this.canvas.getBoundingClientRect();
@@ -228,10 +429,11 @@ export class DesignCanvasController {
       }
     };
 
+    const draggedOriginalKeys = this.dragContext?.type === "drag" ? this.dragContext.originalKeys : null;
     // --- Draw Keys ---
     for (const key of this.map.keys) {
       const keyId = getKeyId(key);
-      if (this.draggedOriginalKeys?.has(keyId)) continue;
+      if (draggedOriginalKeys?.has(keyId)) continue;
       drawKey(key, this.selectedKeyIds.has(keyId));
     }
 
@@ -307,3 +509,4 @@ export class DesignCanvasController {
     ctx.restore();
   }
 }
+```
