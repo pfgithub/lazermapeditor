@@ -1,4 +1,4 @@
-import type { Key, Map } from "@/store";
+import type { Note, Beatmap } from "@/store";
 import {
   calculateTimingPointsInRange,
   findNearestSnap,
@@ -7,7 +7,7 @@ import {
   type Snap,
 } from "@/lib/timingPoints";
 
-const getKeyId = (key: Key): string => `${key.startTime}-${key.key}`;
+const getKeyId = (key: Note): string => `${key.startTime}-${key.key}`;
 
 type SetStateAction<S> = S | ((prevState: S) => S);
 
@@ -21,16 +21,16 @@ type DragContext =
       type: "drag";
       initialMouseTime: number;
       initialMouseLane: number;
-      originalKeys: Map<string, Key>; // Map from key ID to original key object
+      originalKeys: Map<string, Note>; // Map from key ID to original key object
     }
   | null;
 
 export interface DesignCanvasControllerOptions {
   canvas: HTMLCanvasElement;
-  map: Map;
+  map: Beatmap;
   getCurrentTime: () => number;
   snap: Snap;
-  setMap: (map: Map) => void;
+  setMap: (map: Beatmap) => void;
 }
 const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
   d: 0,
@@ -48,18 +48,18 @@ const themeColors = {
 export class DesignCanvasController {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private map: Map;
+  private map: Beatmap;
   private getCurrentTime: () => number;
   private snap: Snap;
   
-  private setMap: (map: Map) => void;
+  private setMap: (map: Beatmap) => void;
   
   private dragContext: DragContext = null;
   
   activeHolds: Map<0 | 1 | 2 | 3, number> = new Map();
   selectedKeyIds: Set<string> = new Set();
   selectionBox: { x1: number; t1: number; x2: number; t2: number } | null = null;
-  draggedKeysPreview: Key[] | null = null;
+  draggedKeysPreview: Note[] | null = null;
 
   constructor(options: DesignCanvasControllerOptions) {
     this.canvas = options.canvas;
@@ -105,17 +105,17 @@ export class DesignCanvasController {
     return lineTime;
   }
 
-  public findKeyAt(x: number, y: number): Key | null {
+  public findKeyAt(x: number, y: number): Note | null {
     const rect = this.canvas.getBoundingClientRect();
     const numLanes = 4;
     const laneWidth = rect.width / numLanes;
     const lane = Math.floor(x / laneWidth);
     const viewStartTime = this.getCurrentTime() - 0.1;
     const viewEndTime = this.getCurrentTime() + 1.0;
-    let clickedKey: Key | null = null;
+    let clickedKey: Note | null = null;
     let minDistance = Infinity;
 
-    for (const key of this.map.keys) {
+    for (const key of this.map.notes) {
       if (key.key !== lane) continue;
       if (key.endTime < viewStartTime || key.startTime > viewEndTime) continue;
 
@@ -139,7 +139,7 @@ export class DesignCanvasController {
     return clickedKey;
   }
 
-  public getKeysInBox(x1: number, t1: number, x2: number, t2: number): Key[] {
+  public getKeysInBox(x1: number, t1: number, x2: number, t2: number): Note[] {
     const y1 = this.posToY(t1);
     const y2 = this.posToY(t2);
     const rect = this.canvas.getBoundingClientRect();
@@ -149,9 +149,9 @@ export class DesignCanvasController {
     const boxRight = Math.max(x1, x2);
     const boxTop = Math.min(y1, y2);
     const boxBottom = Math.max(y1, y2);
-    const selectedKeys: Key[] = [];
+    const selectedKeys: Note[] = [];
 
-    for (const key of this.map.keys) {
+    for (const key of this.map.notes) {
       const keyLeft = key.key * laneWidth;
       const keyRight = (key.key + 1) * laneWidth;
       if (keyLeft > boxRight || keyRight < boxLeft) continue;
@@ -206,8 +206,8 @@ export class DesignCanvasController {
       if (isMultiSelect && isSelected) {
         this.dragContext = null;
       } else {
-        const keysToDrag = new Map<string, Key>();
-        this.map.keys.forEach((k) => {
+        const keysToDrag = new Map<string, Note>();
+        this.map.notes.forEach((k) => {
           if (this.selectedKeyIds.has(getKeyId(k))) {
             keysToDrag.set(getKeyId(k), k);
           }
@@ -266,7 +266,7 @@ export class DesignCanvasController {
         adjustedLaneDelta = numLanes - 1 - maxKey;
       }
 
-      const newKeys: Key[] = [];
+      const newKeys: Note[] = [];
       for (const originalKey of context.originalKeys.values()) {
         const newStartTime = originalKey.startTime + timeDelta;
         const snappedStartTime = findNearestSnap(this.map, newStartTime, this.snap);
@@ -279,7 +279,7 @@ export class DesignCanvasController {
           ...originalKey,
           startTime: originalKey.startTime + snappedTimeDelta,
           endTime: originalKey.endTime + snappedTimeDelta,
-          key: (originalKey.key + adjustedLaneDelta) as Key["key"],
+          key: (originalKey.key + adjustedLaneDelta) as Note["key"],
         });
       }
       this.draggedKeysPreview = newKeys;
@@ -315,10 +315,10 @@ export class DesignCanvasController {
       // type is 'drag'
       if (this.draggedKeysPreview) {
         const draggedKeyOriginalIds = new Set(context.originalKeys.keys());
-        const otherKeys = this.map.keys.filter((k) => !draggedKeyOriginalIds.has(getKeyId(k)));
+        const otherKeys = this.map.notes.filter((k) => !draggedKeyOriginalIds.has(getKeyId(k)));
 
         const newKeys = [...otherKeys, ...this.draggedKeysPreview].sort((a, b) => a.startTime - b.startTime);
-        this.setMap({ ...this.map, keys: newKeys });
+        this.setMap({ ...this.map, notes: newKeys });
 
         const newSelectedKeyIds = new Set(this.draggedKeysPreview.map(getKeyId));
         this.selectedKeyIds = newSelectedKeyIds;
@@ -353,18 +353,18 @@ export class DesignCanvasController {
     const endTime = findNearestSnap(this.map, this.getCurrentTime(), this.snap);
     if (endTime == null) return;
 
-    const newKey: Key = {
+    const newKey: Note = {
       startTime,
       endTime: Math.max(startTime, endTime),
       key: keyIndex,
     };
 
-    if (this.map.keys.some((k) => k.startTime === newKey.startTime && k.key === newKey.key)) {
+    if (this.map.notes.some((k) => k.startTime === newKey.startTime && k.key === newKey.key)) {
       return;
     }
 
-    const newKeys = [...this.map.keys, newKey].sort((a, b) => a.startTime - b.startTime);
-    this.setMap({ ...this.map, keys: newKeys });
+    const newKeys = [...this.map.notes, newKey].sort((a, b) => a.startTime - b.startTime);
+    this.setMap({ ...this.map, notes: newKeys });
   }
   public handleDelete(e: KeyboardEvent) {
     if (e.key !== "Backspace" && e.key !== "Delete") return;
@@ -374,9 +374,9 @@ export class DesignCanvasController {
 
     e.preventDefault();
 
-    const newKeys = this.map.keys.filter((key) => !this.selectedKeyIds.has(getKeyId(key)));
+    const newKeys = this.map.notes.filter((key) => !this.selectedKeyIds.has(getKeyId(key)));
 
-    this.setMap({ ...this.map, keys: newKeys });
+    this.setMap({ ...this.map, notes: newKeys });
     this.selectedKeyIds.clear();
   }
 
@@ -432,7 +432,7 @@ export class DesignCanvasController {
       ctx.stroke();
     }
 
-    const drawKey = (key: Key, isSelected: boolean) => {
+    const drawKey = (key: Note, isSelected: boolean) => {
       if (key.endTime < viewStartTime || key.startTime > viewEndTime) return;
 
       const y_start = this.posToY(key.startTime);
@@ -473,7 +473,7 @@ export class DesignCanvasController {
 
     const draggedOriginalKeys = this.dragContext?.type === "drag" ? this.dragContext.originalKeys : null;
     // --- Draw Keys ---
-    for (const key of this.map.keys) {
+    for (const key of this.map.notes) {
       const keyId = getKeyId(key);
       if (draggedOriginalKeys?.has(keyId)) continue;
       drawKey(key, this.selectedKeyIds.has(keyId));
@@ -484,7 +484,7 @@ export class DesignCanvasController {
       drawKey({
         startTime,
         endTime: findNearestSnap(this.map, time, this.snap) ?? time,
-        key: +lane as Key["key"],
+        key: +lane as Note["key"],
       }, false);
     }
 

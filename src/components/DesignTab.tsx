@@ -1,20 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { Key, Map } from "@/store";
+import type { Note, Beatmap } from "@/store";
 import { findNearestSnap, findNextSnap, findPreviousSnap, snapLevels, type Snap } from "@/lib/timingPoints";
 import { DesignCanvasController } from "@/lib/DesignCanvasController";
 
 interface DesignTabProps {
-  map: Map;
-  setMap: (map: Map) => void;
+  map: Beatmap;
+  setMap: (map: Beatmap) => void;
   getCurrentTime: () => number;
   seek: (time: number) => void;
   snap: Snap;
   setSnap: (snap: Snap) => void;
 }
 
-const getKeyId = (key: Key): string => `${key.startTime}-${key.key}`;
+const getKeyId = (key: Note): string => `${key.startTime}-${key.key}`;
 
 export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: DesignTabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

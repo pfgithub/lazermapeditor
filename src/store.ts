@@ -8,15 +8,15 @@ export type TimingSegment = {
   bpm: number;
 };
 
-export type Key = {
+export type Note = {
   startTime: number;
   endTime: number;
   key: 0 | 1 | 2 | 3;
 };
 
-export type Map = {
+export type Beatmap = {
   timing: TimingSegment[]; // sorted by start time
-  keys: Key[]; // sorted by time
+  notes: Note[]; // sorted by time
 };
 
 export type Song = {
@@ -25,16 +25,16 @@ export type Song = {
 };
 
 interface AppState {
-  map: Map;
+  map: Beatmap;
   song: Song | null;
   isInitialized: boolean;
-  setMap: (map: Map) => void;
+  setMap: (map: Beatmap) => void;
   setSongFile: (songFile: File | null) => void;
   loadFromDb: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
-  map: { timing: [], keys: [] },
+  map: { timing: [], notes: [] },
   song: null,
   isInitialized: false,
 
@@ -67,7 +67,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadFromDb: async () => {
     if (get().isInitialized) return;
     try {
-      const [mapData, songFile] = await Promise.all([getMap<Map>(), getSongFile()]);
+      const [mapData, songFile] = await Promise.all([getMap<Beatmap>(), getSongFile()]);
       if (mapData) {
         set({ map: mapData });
       }

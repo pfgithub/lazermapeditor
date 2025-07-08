@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Map } from "@/store";
+import type { Beatmap } from "@/store";
 import {
   calculateTimingPointsInRange,
   getColorForSnap,
@@ -11,7 +11,7 @@ interface WaveformDisplayProps {
   audioBuffer: AudioBuffer | null;
   isSongLoading: boolean;
   getCurrentTime: () => number;
-  map: Map;
+  map: Beatmap;
   snap: Snap;
 }
 
@@ -22,7 +22,7 @@ const drawSnapMarkers = (
   width: number,
   height: number,
   viewStartTime: number,
-  map: Map,
+  map: Beatmap,
   snap: Snap,
 ) => {
   const viewEndTime = viewStartTime + DURATION_S;

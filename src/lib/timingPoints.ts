@@ -1,6 +1,6 @@
-import type { Map, TimingSegment } from "@/store";
+import type { Beatmap, TimingSegment } from "@/store";
 
-export function calculateTimingPointsInRange(map: Map, startTime: number, endTime: number, divisionCount: Snap): number[] {
+export function calculateTimingPointsInRange(map: Beatmap, startTime: number, endTime: number, divisionCount: Snap): number[] {
   type RenderSegment = {start: number, end: number, segment: TimingSegment};
   const renderSegments: RenderSegment[] = [];
   for(let i = 0; i < map.timing.length; i++) {
@@ -27,21 +27,21 @@ export function calculateTimingPointsInRange(map: Map, startTime: number, endTim
   return results;
 }
 
-export function findNextSnap(map: Map, time: number, snap: Snap): number | null {
+export function findNextSnap(map: Beatmap, time: number, snap: Snap): number | null {
   // A small epsilon to avoid getting the current time back
   const points = calculateTimingPointsInRange(map, time + 0.00001, time + 10, snap);
   if (points.length > 0) return points[0];
   return null;
 }
 
-export function findPreviousSnap(map: Map, time: number, snap: Snap): number | null {
+export function findPreviousSnap(map: Beatmap, time: number, snap: Snap): number | null {
   // A small epsilon to avoid getting the current time back
   const points = calculateTimingPointsInRange(map, time - 10, time - 0.00001, snap);
   if (points.length > 0) return points[points.length - 1];
   return null;
 }
 
-export function findNearestSnap(map: Map, time: number, snap: Snap): number | null {
+export function findNearestSnap(map: Beatmap, time: number, snap: Snap): number | null {
   const points = calculateTimingPointsInRange(map, time - 10, time + 10, snap);
   let nearest: number | null = null;
   for(const point of points) {
@@ -55,7 +55,7 @@ export function findNearestSnap(map: Map, time: number, snap: Snap): number | nu
 export type Snap = 1 | 2 | 4 | 8 | 16 | 3 | 6 | 12 | 24;
 export const snapLevels: Snap[] = [1, 2, 4, 8, 16, 3, 6, 12, 24];
 
-export function getSnapForTime(map: Map, time: number): Snap | undefined {
+export function getSnapForTime(map: Beatmap, time: number): Snap | undefined {
   let segment: TimingSegment | undefined;
   for(const timingSegment of map.timing) {
     if(timingSegment.startTime <= time) segment = timingSegment;
