@@ -22,7 +22,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const controllerRef = useRef<DesignCanvasController | null>(null);
 
   const activeHoldsRef = useRef<Partial<Record<0 | 1 | 2 | 3, number>>>({});
-  const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set());
 
   const [themeColors, setThemeColors] = useState({
     border: "hsl(217.2 32.6% 17.5%)",
@@ -41,18 +40,15 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         map,
         getCurrentTime,
         snap,
-        selectedKeyIds,
         themeColors,
         activeHolds: activeHoldsRef.current,
         // Callbacks to update component state
         setMap,
-        setSelectedKeyIds,
       });
     } else {
       controllerRef.current.update({
         map,
         snap,
-        selectedKeyIds,
         themeColors,
         activeHolds: activeHoldsRef.current,
       });
@@ -81,15 +77,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
     const handleKeyDown = (e: KeyboardEvent) => {
       const keyIndex = keyMap[e.key.toLowerCase()];
       if (keyIndex === undefined || e.repeat) return;
-      const activeEl = document.activeElement;
-      if (
-        activeEl &&
-        ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
-          activeEl.tagName === "TEXTAREA" ||
-          activeEl.tagName === "SELECT")
-      ) {
-        return;
-      }
+      if(!controllerRef.current?.allowKeyEvent(e)) return;
 
       if (activeHoldsRef.current[keyIndex] !== undefined) return;
 
@@ -134,36 +122,16 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
     };
   }, [map, setMap, snap, getCurrentTime]);
 
+  const handleDelete = (e: KeyboardEvent) => {
+    controllerRef.current?.handleDelete(e);
+  }
   // Key deletion handler
   useEffect(() => {
-    const handleDelete = (e: KeyboardEvent) => {
-      if (e.key !== "Backspace" && e.key !== "Delete") return;
-      if (selectedKeyIds.size === 0) return;
-
-      const activeEl = document.activeElement;
-      if (
-        activeEl &&
-        ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
-          activeEl.tagName === "TEXTAREA" ||
-          activeEl.tagName === "SELECT" ||
-          activeEl.tagName === "BUTTON")
-      ) {
-        return;
-      }
-
-      e.preventDefault();
-
-      const newKeys = map.keys.filter((key) => !selectedKeyIds.has(getKeyId(key)));
-
-      setMap({ ...map, keys: newKeys });
-      setSelectedKeyIds(new Set());
-    };
-
     window.addEventListener("keydown", handleDelete);
     return () => {
       window.removeEventListener("keydown", handleDelete);
     };
-  }, [map, setMap, selectedKeyIds]);
+  }, []);
 
   // Handle canvas resizing
   useEffect(() => {

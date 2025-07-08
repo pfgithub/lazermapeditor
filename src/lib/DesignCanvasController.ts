@@ -30,7 +30,6 @@ export interface DesignCanvasControllerOptions {
   map: Map;
   getCurrentTime: () => number;
   snap: Snap;
-  selectedKeyIds: Set<string>;
   themeColors: {
     border: string;
     ring: string;
@@ -38,7 +37,6 @@ export interface DesignCanvasControllerOptions {
   };
   activeHolds: Partial<Record<0 | 1 | 2 | 3, number>>;
   setMap: (map: Map) => void;
-  setSelectedKeyIds: (value: SetStateAction<Set<string>>) => void;
 }
 
 export class DesignCanvasController {
@@ -47,15 +45,14 @@ export class DesignCanvasController {
   private map: Map;
   private getCurrentTime: () => number;
   private snap: Snap;
-  private selectedKeyIds: Set<string>;
   private themeColors: { border: string; ring: string; ringTransparent: string };
   private activeHolds: Partial<Record<0 | 1 | 2 | 3, number>>;
   
   private setMap: (map: Map) => void;
-  private setSelectedKeyIds: (value: SetStateAction<Set<string>>) => void;
   
   private dragContext: DragContext = null;
 
+  selectedKeyIds: Set<string> = new Set();
   selectionBox: { x1: number; t1: number; x2: number; t2: number } | null = null;
   draggedKeysPreview: Key[] | null = null;
 
@@ -70,12 +67,10 @@ export class DesignCanvasController {
     this.map = options.map;
     this.getCurrentTime = options.getCurrentTime;
     this.snap = options.snap;
-    this.selectedKeyIds = options.selectedKeyIds;
     this.themeColors = options.themeColors;
     this.activeHolds = options.activeHolds;
 
     this.setMap = options.setMap;
-    this.setSelectedKeyIds = options.setSelectedKeyIds;
   }
 
   public update(
@@ -190,25 +185,18 @@ export class DesignCanvasController {
     if (clickedKey) {
       const keyId = getKeyId(clickedKey);
       const isSelected = this.selectedKeyIds.has(keyId);
-      let nextSelectedKeyIds = new Set(this.selectedKeyIds);
-      let selectionChanged = false;
 
       if (isMultiSelect) {
         if (isSelected) {
-          nextSelectedKeyIds.delete(keyId);
+          this.selectedKeyIds.delete(keyId);
         } else {
-          nextSelectedKeyIds.add(keyId);
+          this.selectedKeyIds.add(keyId);
         }
-        selectionChanged = true;
       } else {
         if (!isSelected || this.selectedKeyIds.size > 1) {
-          nextSelectedKeyIds = new Set([keyId]);
-          selectionChanged = true;
+          this.selectedKeyIds.clear();
+          this.selectedKeyIds.add(keyId);
         }
-      }
-
-      if (selectionChanged) {
-        this.setSelectedKeyIds(nextSelectedKeyIds);
       }
 
       // Only start a drag if we're not deselecting with a multi-select key.
@@ -217,7 +205,7 @@ export class DesignCanvasController {
       } else {
         const keysToDrag = new Map<string, Key>();
         this.map.keys.forEach((k) => {
-          if (nextSelectedKeyIds.has(getKeyId(k))) {
+          if (this.selectedKeyIds.has(getKeyId(k))) {
             keysToDrag.set(getKeyId(k), k);
           }
         });
@@ -232,7 +220,7 @@ export class DesignCanvasController {
     } else {
       // No key clicked, start box selection
       if (!isMultiSelect) {
-        this.setSelectedKeyIds(new Set());
+        this.selectedKeyIds.clear();
       }
       const time = this.yToPos(y);
       this.dragContext = {
@@ -313,13 +301,9 @@ export class DesignCanvasController {
 
           const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
           if (isMultiSelect) {
-            this.setSelectedKeyIds((prev) => {
-              const newSelection = new Set(prev);
-              keyIdsInBox.forEach((id) => newSelection.add(id));
-              return newSelection;
-            });
+            keyIdsInBox.forEach((id) => this.selectedKeyIds.add(id));
           } else {
-            this.setSelectedKeyIds(keyIdsInBox);
+            this.selectedKeyIds = keyIdsInBox;
           }
         }
       }
@@ -334,11 +318,38 @@ export class DesignCanvasController {
         this.setMap({ ...this.map, keys: newKeys });
 
         const newSelectedKeyIds = new Set(this.draggedKeysPreview.map(getKeyId));
-        this.setSelectedKeyIds(newSelectedKeyIds);
+        this.selectedKeyIds = newSelectedKeyIds;
       }
       this.draggedKeysPreview = null;
     }
     this.dragContext = null;
+  }
+
+  public handleDelete(e: KeyboardEvent) {
+    if (e.key !== "Backspace" && e.key !== "Delete") return;
+    if (this.selectedKeyIds.size === 0) return;
+
+    if(!this.allowKeyEvent(e)) return;
+
+    e.preventDefault();
+
+    const newKeys = this.map.keys.filter((key) => !this.selectedKeyIds.has(getKeyId(key)));
+
+    this.setMap({ ...this.map, keys: newKeys });
+    this.selectedKeyIds.clear();
+  }
+
+  public allowKeyEvent(e: KeyboardEvent): boolean {
+    const activeEl = document.activeElement;
+    if (
+      activeEl &&
+      ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
+        activeEl.tagName === "TEXTAREA" ||
+        activeEl.tagName === "SELECT")
+    ) {
+      return false;
+    }
+    return true;
   }
 
   public draw() {
