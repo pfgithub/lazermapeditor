@@ -49,7 +49,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const [themeColors, setThemeColors] = useState({
     border: "hsl(217.2 32.6% 17.5%)",
     ring: "hsl(217.2 91.2% 59.8%)",
-    ringTransparent: "hsla(217.2 91.2% 59.8%, 0.2)",
+    ringTransparent: "hsla(217.2 91.2% 59.8% / 0.2)",
   });
 
   // Memoized function to convert time to a Y-coordinate on the canvas
@@ -206,10 +206,12 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         } else {
           // Hold Note
           const noteWidth = laneWidth - 10;
-          ctx.fillStyle = color + "80"; // semi-transparent
+          ctx.fillStyle = color;
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.4;
           ctx.fillRect(x_start + 5, y_end, noteWidth, y_start - y_end);
+          ctx.globalAlpha = 1.0;
           ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
 
           if (isSelected) {
@@ -257,10 +259,12 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
             ctx.strokeRect(x_start + 3, y_start - 5, laneWidth - 6, 10);
           } else {
             const noteWidth = laneWidth - 10;
-            ctx.fillStyle = color + "80";
+            ctx.fillStyle = color;
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.4;
             ctx.fillRect(x_start + 5, y_end, noteWidth, y_start - y_end);
+            ctx.globalAlpha = 1.0;
             ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
             ctx.strokeStyle = themeColors.ring;
             ctx.lineWidth = 4;
