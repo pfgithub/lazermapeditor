@@ -1,3 +1,4 @@
+```ts
 import type { Note, Beatmap } from "@/store";
 import {
   calculateTimingPointsInRange,
@@ -24,6 +25,12 @@ type DragContext =
       newKeys: Set<Note>;
     }
   | null;
+
+type ClipboardNote = {
+  relativeStartTime: number;
+  relativeEndTime: number;
+  key: 0 | 1 | 2 | 3;
+};
 
 export interface DesignCanvasControllerOptions {
   canvas: HTMLCanvasElement;
@@ -326,10 +333,114 @@ export class DesignCanvasController {
     this.dragContext = null;
   }
 
+  private async handleCopy() {
+    if (this.selectedKeyIds.size === 0) return;
+
+    const selectedNotes = Array.from(this.selectedKeyIds);
+    if (selectedNotes.length === 0) return;
+
+    // Find the earliest start time to make other times relative
+    const baseTime = Math.min(...selectedNotes.map((n) => n.startTime));
+
+    const clipboardData: ClipboardNote[] = selectedNotes.map((note) => ({
+      key: note.key,
+      relativeStartTime: note.startTime - baseTime,
+      relativeEndTime: note.endTime - baseTime,
+    }));
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(clipboardData));
+    } catch (err) {
+      console.error("Failed to copy notes to clipboard:", err);
+    }
+  }
+
+  private async handlePaste() {
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      const potentialNotes = JSON.parse(clipboardText);
+
+      // Basic validation
+      if (!Array.isArray(potentialNotes) || potentialNotes.length === 0) {
+        return;
+      }
+
+      const clipboardNotes = potentialNotes as ClipboardNote[];
+
+      const pasteTime = findNearestSnap(this.map, this.getCurrentTime(), this.snap) ?? this.getCurrentTime();
+
+      const newNotes: Note[] = [];
+      for (const clipboardNote of clipboardNotes) {
+        // More validation
+        if (
+          typeof clipboardNote.key !== "number" ||
+          ![0, 1, 2, 3].includes(clipboardNote.key) ||
+          typeof clipboardNote.relativeStartTime !== "number" ||
+          typeof clipboardNote.relativeEndTime !== "number"
+        ) {
+          console.warn("Invalid note format in clipboard, skipping note:", clipboardNote);
+          continue;
+        }
+
+        const newNote: Note = {
+          key: clipboardNote.key as Note["key"],
+          startTime: pasteTime + clipboardNote.relativeStartTime,
+          endTime: pasteTime + clipboardNote.relativeEndTime,
+        };
+        newNotes.push(newNote);
+      }
+
+      // Deselect old notes
+      this.selectedKeyIds.clear();
+
+      // Add new notes to map
+      const updatedNotes = [...this.map.notes, ...newNotes].sort((a, b) => a.startTime - b.startTime);
+      this.setMap({ ...this.map, notes: updatedNotes });
+
+      // Select the new notes.
+      newNotes.forEach((note) => this.selectedKeyIds.add(note));
+    } catch (err) {
+      console.warn("Failed to paste notes from clipboard:", err);
+    }
+  }
+
+  private handleDelete() {
+    if (this.selectedKeyIds.size === 0) return;
+
+    const newKeys = this.map.notes.filter((key) => !this.selectedKeyIds.has(key));
+
+    this.setMap({ ...this.map, notes: newKeys });
+    this.selectedKeyIds.clear();
+  }
+
   public handleKeyDown(e: KeyboardEvent) {
+    if (!allowKeyEvent(e)) return;
+
+    // --- Copy, Paste, Delete ---
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        this.handleCopy();
+        return;
+      }
+      if (e.key.toLowerCase() === "v") {
+        e.preventDefault();
+        this.handlePaste();
+        return;
+      }
+    }
+
+    if (e.key === "Backspace" || e.key === "Delete") {
+      if (this.selectedKeyIds.size > 0) {
+        e.preventDefault();
+        this.handleDelete();
+      }
+      return;
+    }
+
+    // --- Place Note ---
     const keyIndex = keyMap[e.key.toLowerCase()];
     if (keyIndex === undefined || e.repeat) return;
-    if(!allowKeyEvent(e)) return;
 
     if (this.activeHolds.get(keyIndex) != null) return;
 
@@ -339,6 +450,7 @@ export class DesignCanvasController {
     e.preventDefault();
     this.activeHolds.set(keyIndex, nearestTime);
   }
+
   public handleKeyUp(e: KeyboardEvent) {
     const keyIndex = keyMap[e.key.toLowerCase()];
     if (keyIndex === undefined) return;
@@ -363,18 +475,6 @@ export class DesignCanvasController {
 
     const newKeys = [...this.map.notes, newKey].sort((a, b) => a.startTime - b.startTime);
     this.setMap({ ...this.map, notes: newKeys });
-  }
-  public handleDelete(e: KeyboardEvent) {
-    if (e.key !== "Backspace" && e.key !== "Delete") return;
-    if (this.selectedKeyIds.size === 0) return;
-    if(!allowKeyEvent(e)) return;
-
-    e.preventDefault();
-
-    const newKeys = this.map.notes.filter((key) => !this.selectedKeyIds.has(key));
-
-    this.setMap({ ...this.map, notes: newKeys });
-    this.selectedKeyIds.clear();
   }
 
   public draw() {
@@ -535,3 +635,4 @@ export class DesignCanvasController {
     ctx.restore();
   }
 }
+```
