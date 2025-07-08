@@ -3,7 +3,7 @@ import { DesignTab } from "@/components/DesignTab";
 import { MetadataTab } from "@/components/MetadataTab";
 import { TimingTab } from "@/components/TimingTab";
 import "./index.css";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "./store";
 import { WaveformDisplay } from "./components/WaveformDisplay";
 import type { Snap } from "./lib/timingPoints";
@@ -160,10 +160,10 @@ export function App() {
   }
 
   return (
-    <main className="w-screen h-screen flex flex-col bg-background text-foreground p-2 gap-2">
+    <main className="w-screen h-screen flex flex-col bg-background text-foreground p-4 gap-4">
       <Tabs
         defaultValue="metadata"
-        className="w-full flex-grow flex flex-col gap-2 min-h-0"
+        className="w-full flex-grow flex flex-col gap-4 min-h-0"
         onValueChange={setActiveTab}
       >
         <TabsList className="mx-auto shrink-0">
@@ -171,10 +171,10 @@ export function App() {
           <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="timing">Timing</TabsTrigger>
         </TabsList>
-        <TabsContent value="metadata" className="flex-grow min-h-0 bg-card rounded-lg border">
+        <TabsContent value="metadata" className="flex-grow min-h-0 m-0">
           <MetadataTab song={song} setSong={setSongFile} />
         </TabsContent>
-        <TabsContent value="design" className="flex-grow min-h-0">
+        <TabsContent value="design" className="flex-grow min-h-0 m-0">
           <DesignTab
             map={map}
             setMap={setMap}
@@ -184,12 +184,12 @@ export function App() {
             setSnap={setDesignSnap}
           />
         </TabsContent>
-        <TabsContent value="timing" className="flex-grow min-h-0 bg-card rounded-lg border">
+        <TabsContent value="timing" className="flex-grow min-h-0 m-0">
           <TimingTab map={map} setMap={setMap} getCurrentTime={getCurrentTime} songUrl={song?.url ?? null} />
         </TabsContent>
       </Tabs>
 
-      <footer className="shrink-0 flex flex-col gap-2">
+      <footer className="shrink-0 flex flex-col gap-4">
         <div className="h-24">
           <WaveformDisplay
             audioBuffer={audioBuffer}
@@ -200,7 +200,7 @@ export function App() {
           />
         </div>
         {song?.url ? (
-          <div className="flex items-center gap-4 bg-muted/80 p-2 rounded-md h-[54px]">
+          <div className="flex items-center gap-4 bg-card border border-border p-3 rounded-lg h-[60px]">
             <Button
               onClick={() => {
                 const controller = audioControllerRef.current;
@@ -218,7 +218,7 @@ export function App() {
                 <Play className="h-5 w-5" />
               )}
             </Button>
-            <div className="text-sm font-mono w-28 text-center">
+            <div className="text-sm font-mono w-28 text-center text-muted-foreground">
               {formatTime(currentTimeRounded)} / {formatTime(duration)}
             </div>
             <input
@@ -227,12 +227,12 @@ export function App() {
               max={duration || 1}
               value={currentTimeRounded}
               step="0.01"
-              className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
               onChange={(e) => handleSeek(parseFloat(e.target.value))}
             />
           </div>
         ) : (
-          <div className="text-center text-muted-foreground p-4 bg-muted rounded-md h-[54px] flex items-center justify-center">
+          <div className="text-center text-muted-foreground bg-card border border-border p-3 rounded-lg h-[60px] flex items-center justify-center">
             Please select a song in the Metadata tab.
           </div>
         )}

@@ -34,6 +34,24 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const [selectionBox, setSelectionBox] = useState<{ x1: number; t1: number; x2: number; t2: number } | null>(null);
   const isDraggingRef = useRef(false);
 
+  const [themeColors, setThemeColors] = useState({
+    border: "hsl(240 3.7% 15.9%)",
+    ring: "hsl(240 4.9% 83.9%)",
+    ringTransparent: "hsla(240 4.9% 83.9%, 0.2)",
+  });
+
+  useEffect(() => {
+    // We need to get the resolved CSS variables to use them in the Canvas API.
+    const computedStyle = getComputedStyle(document.documentElement);
+    const border = computedStyle.getPropertyValue("--border").trim();
+    const ring = computedStyle.getPropertyValue("--ring").trim();
+    setThemeColors({
+      border: `hsl(${border})`,
+      ring: `hsl(${ring})`,
+      ringTransparent: `hsla(${ring}, 0.2)`,
+    });
+  }, []);
+
   // Memoized function to convert time to a Y-coordinate on the canvas
   const posToY = useCallback(
     (lineTime: number) => {
@@ -83,7 +101,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
       // --- Draw Columns for 4K ---
       const numLanes = 4;
       const laneWidth = width / numLanes;
-      ctx.strokeStyle = "hsl(var(--border))";
+      ctx.strokeStyle = themeColors.border;
       ctx.lineWidth = 1;
       for (let i = 1; i < numLanes; i++) {
         ctx.beginPath();
@@ -133,7 +151,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
           ctx.stroke();
 
           if (isSelected) {
-            ctx.strokeStyle = "hsl(var(--ring))";
+            ctx.strokeStyle = themeColors.ring;
             ctx.lineWidth = 2;
             ctx.strokeRect(x_start + 3, y_start - 5, laneWidth - 6, 10);
           }
@@ -147,7 +165,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
           ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
 
           if (isSelected) {
-            ctx.strokeStyle = "hsl(var(--ring))";
+            ctx.strokeStyle = themeColors.ring;
             ctx.lineWidth = 4;
             ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
           }
@@ -159,8 +177,8 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         const { x1, t1, x2, t2 } = selectionBox;
         const y1 = posToY(t1);
         const y2 = posToY(t2);
-        ctx.fillStyle = "hsla(var(--ring), 0.2)";
-        ctx.strokeStyle = "hsl(var(--ring))";
+        ctx.fillStyle = themeColors.ringTransparent;
+        ctx.strokeStyle = themeColors.ring;
         ctx.lineWidth = 1;
         const rectX = Math.min(x1, x2);
         const rectY = Math.min(y1, y2);
@@ -181,7 +199,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
 
       ctx.restore();
     },
-    [map, snap, selectedKeyIds, posToY, selectionBox],
+    [map, snap, selectedKeyIds, posToY, selectionBox, themeColors],
   );
 
   useEffect(() => {
@@ -293,13 +311,14 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
 
   // Redraw canvas whenever time changes
   useEffect(() => {
+    let animationFrame: number;
     const next = () => {
       draw(getCurrentTime());
-      return requestAnimationFrame(() => animationFrame = next());
-    }
-    let animationFrame = next();
+      animationFrame = requestAnimationFrame(next);
+    };
+    next();
     return () => cancelAnimationFrame(animationFrame);
-  }, [draw]);
+  }, [draw, getCurrentTime]);
 
   // Handle canvas resizing
   useEffect(() => {
@@ -336,8 +355,11 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
     const resizeObserver = new ResizeObserver(performResize);
     resizeObserver.observe(container);
 
+    // Initial resize
+    performResize();
+
     return () => resizeObserver.disconnect();
-  }, [draw, getCurrentTime()]);
+  }, [draw, getCurrentTime]);
 
   const handleWheel = (e: React.WheelEvent) => {
     if (!seek) return;
@@ -406,7 +428,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
       }
       return selectedKeys;
     },
-    [map.keys, posToY],
+    [map.keys, posToY, getCurrentTime],
   );
 
   const handleClick = useCallback(
@@ -477,7 +499,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         }
       }
     },
-    [map.keys, selectedKeyIds, posToY],
+    [map.keys, selectedKeyIds, posToY, getCurrentTime],
   );
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -542,8 +564,8 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   );
 
   return (
-    <div className="flex flex-col h-full gap-2">
-      <div className="flex items-center justify-between p-2 bg-card border rounded-lg shrink-0">
+    <div className="flex flex-col h-full gap-4">
+      <div className="flex items-center justify-between p-3 bg-card border rounded-lg shrink-0">
         <div className="flex items-center gap-2">
           <Label>Snap:</Label>
           {snapLevels.map((level) => (

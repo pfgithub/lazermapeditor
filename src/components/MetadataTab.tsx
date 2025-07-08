@@ -21,7 +21,7 @@ export function MetadataTab({ song, setSong }: MetadataTabProps) {
   };
 
   return (
-    <div className="p-4 h-full overflow-y-auto">
+    <div className="p-4 h-full overflow-y-auto bg-card rounded-lg border">
       <form className="grid gap-4 max-w-2xl mx-auto">
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="map-name" className="text-right">

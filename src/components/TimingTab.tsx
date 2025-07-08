@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +52,7 @@ export function TimingTab({ map, setMap, songUrl, getCurrentTime }: TimingTabPro
   };
 
   return (
-    <div className="flex flex-row h-full">
+    <div className="flex flex-row h-full bg-card rounded-lg border overflow-hidden">
       <div className="flex-grow flex flex-col gap-4 p-4">
         {/* Top section: Player and Add button */}
         <div className="flex flex-col gap-2">

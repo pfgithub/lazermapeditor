@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Map } from "@/store";
 import {
   calculateTimingPointsInRange,
@@ -53,8 +53,9 @@ const drawWaveform = (
   height: number,
   buffer: AudioBuffer,
   time: number,
+  primaryColor: string,
 ) => {
-  ctx.fillStyle = "hsl(var(--primary) / 0.6)";
+  ctx.fillStyle = primaryColor;
 
   const channelData = buffer.getChannelData(0); // Use first channel
   const { sampleRate, length: bufferLength } = buffer;
@@ -99,6 +100,13 @@ const drawWaveform = (
 export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, map, snap }: WaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [primaryColor, setPrimaryColor] = useState("hsl(var(--primary) / 0.6)");
+
+  useEffect(() => {
+    const computedStyle = getComputedStyle(document.documentElement);
+    const primary = computedStyle.getPropertyValue('--primary').trim();
+    setPrimaryColor(`hsl(${primary} / 0.6)`);
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -114,16 +122,17 @@ export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, ma
       return;
     }
 
-    drawWaveform(ctx, width, height, audioBuffer, getCurrentTime());
+    drawWaveform(ctx, width, height, audioBuffer, getCurrentTime(), primaryColor);
     drawSnapMarkers(ctx, width, height, getCurrentTime(), map, snap);
-  }, [audioBuffer, map, snap]);
+  }, [audioBuffer, map, snap, getCurrentTime, primaryColor]);
 
   useEffect(() => {
+    let animationFrame: number;
     const next = () => {
       draw();
-      return requestAnimationFrame(() => animationFrame = next());
+      animationFrame = requestAnimationFrame(next);
     }
-    let animationFrame = next();
+    next();
     return () => cancelAnimationFrame(animationFrame);
   }, [draw]);
 

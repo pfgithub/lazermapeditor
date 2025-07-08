@@ -81,13 +81,17 @@ export function getSnapForTime(map: Map, time: number): Snap | undefined {
 }
 
 export function getColorForSnap(snap: Snap | undefined) {
-  if(snap === 1) return "black";
-  if(snap === 2) return "red";
-  if(snap === 4) return "blue";
-  if(snap === 8) return "yellow";
-  if(snap === 16) return "RebeccaPurple";
-  if(snap === 3) return "MediumPurple";
-  if(snap === 6) return "Wheat";
-  if(snap === 12) return "SandyBrown";
-  return "gray";
+  // Vibrant colors for dark mode
+  if (snap === 1) return "hsl(0, 100%, 70%)"; // Red - Whole beats
+  if (snap === 4) return "hsl(0, 0%, 95%)"; // White - 1/4 beats
+  if (snap === 2) return "hsl(210, 100%, 70%)"; // Blue - 1/2 beats
+  if (snap === 8) return "hsl(60, 100%, 70%)"; // Yellow - 1/8 beats
+  if (snap === 16) return "hsl(280, 100%, 80%)"; // Purple - 1/16 beats
+
+  // Triplets
+  if (snap === 3) return "hsl(120, 100%, 65%)"; // Green - 1/3 beats
+  if (snap === 6) return "hsl(90, 100%, 75%)"; // Lime - 1/6 beats
+  if (snap === 12) return "hsl(30, 100%, 75%)"; // Orange - 1/12 beats
+  
+  return "hsl(240, 10%, 40%)"; // Grey for anything else (e.g. 1/24)
 }
