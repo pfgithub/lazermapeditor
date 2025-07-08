@@ -7,8 +7,6 @@ import {
   type Snap,
 } from "@/lib/timingPoints";
 
-const getKeyId = (key: Note): string => `${key.startTime}-${key.key}`;
-
 type SetStateAction<S> = S | ((prevState: S) => S);
 
 type DragContext =
@@ -21,7 +19,7 @@ type DragContext =
       type: "drag";
       initialMouseTime: number;
       initialMouseLane: number;
-      originalKeys: Map<string, Note>; // Map from key ID to original key object
+      originalKeys: Map<Note, Note>; // Map from key ID to original key object
     }
   | null;
 
@@ -57,7 +55,7 @@ export class DesignCanvasController {
   private dragContext: DragContext = null;
   
   activeHolds: Map<0 | 1 | 2 | 3, number> = new Map();
-  selectedKeyIds: Set<string> = new Set();
+  selectedKeyIds: Set<Note> = new Set();
   selectionBox: { x1: number; t1: number; x2: number; t2: number } | null = null;
   draggedKeysPreview: Note[] | null = null;
 
@@ -186,19 +184,18 @@ export class DesignCanvasController {
     const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
 
     if (clickedKey) {
-      const keyId = getKeyId(clickedKey);
-      const isSelected = this.selectedKeyIds.has(keyId);
+      const isSelected = this.selectedKeyIds.has(clickedKey);
 
       if (isMultiSelect) {
         if (isSelected) {
-          this.selectedKeyIds.delete(keyId);
+          this.selectedKeyIds.delete(clickedKey);
         } else {
-          this.selectedKeyIds.add(keyId);
+          this.selectedKeyIds.add(clickedKey);
         }
       } else {
         if (!isSelected || this.selectedKeyIds.size > 1) {
           this.selectedKeyIds.clear();
-          this.selectedKeyIds.add(keyId);
+          this.selectedKeyIds.add(clickedKey);
         }
       }
 
@@ -206,10 +203,10 @@ export class DesignCanvasController {
       if (isMultiSelect && isSelected) {
         this.dragContext = null;
       } else {
-        const keysToDrag = new Map<string, Note>();
+        const keysToDrag = new Map<Note, Note>();
         this.map.notes.forEach((k) => {
-          if (this.selectedKeyIds.has(getKeyId(k))) {
-            keysToDrag.set(getKeyId(k), k);
+          if (this.selectedKeyIds.has(k)) {
+            keysToDrag.set(k, k);
           }
         });
 
@@ -304,7 +301,7 @@ export class DesignCanvasController {
 
         if (dragDistance > 5) {
           const keysInBox = this.getKeysInBox(x1, t1, x2, t2);
-          const keyIdsInBox = new Set(keysInBox.map(getKeyId));
+          const keyIdsInBox = new Set(keysInBox);
 
           const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
           if (isMultiSelect) {
@@ -319,12 +316,12 @@ export class DesignCanvasController {
       // type is 'drag'
       if (this.draggedKeysPreview) {
         const draggedKeyOriginalIds = new Set(context.originalKeys.keys());
-        const otherKeys = this.map.notes.filter((k) => !draggedKeyOriginalIds.has(getKeyId(k)));
+        const otherKeys = this.map.notes.filter((k) => !draggedKeyOriginalIds.has(k));
 
         const newKeys = [...otherKeys, ...this.draggedKeysPreview].sort((a, b) => a.startTime - b.startTime);
         this.setMap({ ...this.map, notes: newKeys });
 
-        const newSelectedKeyIds = new Set(this.draggedKeysPreview.map(getKeyId));
+        const newSelectedKeyIds = new Set(this.draggedKeysPreview);
         this.selectedKeyIds = newSelectedKeyIds;
       }
       this.draggedKeysPreview = null;
@@ -378,7 +375,7 @@ export class DesignCanvasController {
 
     e.preventDefault();
 
-    const newKeys = this.map.notes.filter((key) => !this.selectedKeyIds.has(getKeyId(key)));
+    const newKeys = this.map.notes.filter((key) => !this.selectedKeyIds.has(key));
 
     this.setMap({ ...this.map, notes: newKeys });
     this.selectedKeyIds.clear();
@@ -478,7 +475,7 @@ export class DesignCanvasController {
     const draggedOriginalKeys = this.dragContext?.type === "drag" ? this.dragContext.originalKeys : null;
     // --- Draw Keys ---
     for (const key of this.map.notes) {
-      const keyId = getKeyId(key);
+      const keyId = key;
       if (draggedOriginalKeys?.has(keyId)) continue;
       drawKey(key, this.selectedKeyIds.has(keyId));
     }
