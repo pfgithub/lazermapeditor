@@ -3,7 +3,7 @@ import { DesignTab } from "@/components/DesignTab";
 import { MetadataTab } from "@/components/MetadataTab";
 import { TimingTab } from "@/components/TimingTab";
 import "./index.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "./store";
 import { WaveformDisplay } from "./components/WaveformDisplay";
 import type { Snap } from "./lib/timingPoints";
@@ -24,10 +24,11 @@ export function App() {
   const [isSongLoading, setIsSongLoading] = useState(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [activeTab, setActiveTab] = useState("metadata");
   const [designSnap, setDesignSnap] = useState<Snap>(4);
+  // precise time must not be stored in state to prevent excessive rerenders
+  const [currentTimeRounded, setCurrentTimeRounded] = useState(0);
 
   const snapForWaveform = useMemo((): Snap => {
     if (activeTab === "timing") return 16;
@@ -59,14 +60,12 @@ export function App() {
   // Time update loop
   useEffect(() => {
     let animationFrameId: number;
-    if (isPlaying) {
-      const loop = () => {
-        const time = audioControllerRef.current?.getCurrentTime() ?? 0;
-        setCurrentTime(time);
-        animationFrameId = requestAnimationFrame(loop);
-      };
-      loop();
-    }
+    const loop = () => {
+      const time = audioControllerRef.current?.getCurrentTime() ?? 0;
+      setCurrentTimeRounded(Math.round(time));
+      animationFrameId = requestAnimationFrame(loop);
+    };
+    loop();
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
@@ -78,7 +77,6 @@ export function App() {
     if (song?.url && controller) {
       setIsSongLoading(true);
       setIsPlaying(false);
-      setCurrentTime(0);
       setDuration(0);
       setAudioBuffer(null);
       controller
@@ -93,7 +91,6 @@ export function App() {
     } else {
       setAudioBuffer(null);
       setDuration(0);
-      setCurrentTime(0);
     }
   }, [song?.url]);
 
@@ -148,9 +145,10 @@ export function App() {
     };
   }, []);
 
+  const getCurrentTime = () => audioControllerRef.current?.getCurrentTime() ?? 0;
+
   const handleSeek = (time: number) => {
     audioControllerRef.current?.seek(time);
-    setCurrentTime(time);
   };
 
   if (!isInitialized) {
@@ -180,14 +178,14 @@ export function App() {
           <DesignTab
             map={map}
             setMap={setMap}
-            currentTime={currentTime}
+            getCurrentTime={getCurrentTime}
             seek={handleSeek}
             snap={designSnap}
             setSnap={setDesignSnap}
           />
         </TabsContent>
         <TabsContent value="timing" className="flex-grow min-h-0 bg-card rounded-lg border">
-          <TimingTab map={map} setMap={setMap} currentTime={currentTime} songUrl={song?.url ?? null} />
+          <TimingTab map={map} setMap={setMap} getCurrentTime={getCurrentTime} songUrl={song?.url ?? null} />
         </TabsContent>
       </Tabs>
 
@@ -196,7 +194,7 @@ export function App() {
           <WaveformDisplay
             audioBuffer={audioBuffer}
             isSongLoading={isSongLoading}
-            currentTime={currentTime}
+            getCurrentTime={getCurrentTime}
             map={map}
             snap={snapForWaveform}
           />
@@ -221,13 +219,13 @@ export function App() {
               )}
             </Button>
             <div className="text-sm font-mono w-28 text-center">
-              {formatTime(currentTime)} / {formatTime(duration)}
+              {formatTime(currentTimeRounded)} / {formatTime(duration)}
             </div>
             <input
               type="range"
               min="0"
               max={duration || 1}
-              value={currentTime}
+              value={currentTimeRounded}
               step="0.01"
               className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
               onChange={(e) => handleSeek(parseFloat(e.target.value))}

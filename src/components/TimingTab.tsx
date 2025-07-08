@@ -9,10 +9,10 @@ interface TimingTabProps {
   map: Map;
   setMap: (map: Map) => void;
   songUrl: string | null;
-  currentTime: number;
+  getCurrentTime: () => number;
 }
 
-export function TimingTab({ map, setMap, songUrl, currentTime }: TimingTabProps) {
+export function TimingTab({ map, setMap, songUrl, getCurrentTime }: TimingTabProps) {
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
 
   const selectedSegment = map.timing.find((s) => s.id === selectedSegmentId);
@@ -20,7 +20,7 @@ export function TimingTab({ map, setMap, songUrl, currentTime }: TimingTabProps)
   const handleAddSegment = () => {
     const newSegment: TimingSegment = {
       id: crypto.randomUUID(),
-      startTime: currentTime,
+      startTime: getCurrentTime(),
       bpm: 120,
     };
     const newTiming = [...map.timing, newSegment].sort((a, b) => a.startTime - b.startTime);

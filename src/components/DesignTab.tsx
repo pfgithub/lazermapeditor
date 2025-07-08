@@ -16,7 +16,7 @@ import {
 interface DesignTabProps {
   map: Map;
   setMap: (map: Map) => void;
-  currentTime: number;
+  getCurrentTime: () => number;
   seek: (time: number) => void;
   snap: Snap;
   setSnap: (snap: Snap) => void;
@@ -24,7 +24,7 @@ interface DesignTabProps {
 
 const getKeyId = (key: Key): string => `${key.startTime}-${key.key}`;
 
-export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: DesignTabProps) {
+export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: DesignTabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const activeHoldsRef = useRef<Partial<Record<0 | 1 | 2 | 3, number>>>({});
@@ -41,11 +41,11 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
       if (!canvas) return 0;
       const { height } = canvas.getBoundingClientRect();
       if (height === 0) return 0;
-      const startTime = currentTime - 0.1;
-      const endTime = currentTime + 1.0;
+      const startTime = getCurrentTime() - 0.1;
+      const endTime = getCurrentTime() + 1.0;
       return height - ((lineTime - startTime) / (endTime - startTime)) * height;
     },
-    [currentTime],
+    [],
   );
   const yToPos = useCallback(
     (y: number) => {
@@ -54,15 +54,15 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
       const { height } = canvas.getBoundingClientRect();
       if (height === 0) return 0; // Or handle as an error
 
-      const startTime = currentTime - 0.1;
-      const endTime = currentTime + 1.0;
+      const startTime = getCurrentTime() - 0.1;
+      const endTime = getCurrentTime() + 1.0;
 
       if (height === 0) return startTime;
 
       const lineTime = startTime + ((height - y) / height) * (endTime - startTime);
       return lineTime;
     },
-    [currentTime],
+    [getCurrentTime()],
   );
 
   // Main drawing function, called every frame.
@@ -208,7 +208,7 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
 
       if (activeHoldsRef.current[keyIndex] !== undefined) return;
 
-      const nearestTime = findNearestSnap(map, currentTime, snap);
+      const nearestTime = findNearestSnap(map, getCurrentTime(), snap);
       if (nearestTime === null) return;
 
       e.preventDefault();
@@ -235,7 +235,7 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
 
       delete activeHoldsRef.current[keyIndex];
 
-      const endTime = findNearestSnap(map, currentTime, snap);
+      const endTime = findNearestSnap(map, getCurrentTime(), snap);
       if (endTime === null) return;
 
       const newKey: Key = {
@@ -258,7 +258,7 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [map, setMap, currentTime, snap]);
+  }, [map, setMap, snap]);
 
   // Key deletion handler
   useEffect(() => {
@@ -293,8 +293,13 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
 
   // Redraw canvas whenever time changes
   useEffect(() => {
-    draw(currentTime);
-  }, [currentTime, draw]);
+    const next = () => {
+      draw(getCurrentTime());
+      return requestAnimationFrame(() => animationFrame = next());
+    }
+    let animationFrame = next();
+    return () => cancelAnimationFrame(animationFrame);
+  }, [draw]);
 
   // Handle canvas resizing
   useEffect(() => {
@@ -325,14 +330,14 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
       canvas.style.left = `${(containerWidth - canvasWidth) / 2}px`;
       canvas.style.top = `${(containerHeight - canvasHeight) / 2}px`;
 
-      draw(currentTime);
+      draw(getCurrentTime());
     };
 
     const resizeObserver = new ResizeObserver(performResize);
     resizeObserver.observe(container);
 
     return () => resizeObserver.disconnect();
-  }, [draw, currentTime]);
+  }, [draw, getCurrentTime()]);
 
   const handleWheel = (e: React.WheelEvent) => {
     if (!seek) return;
@@ -342,10 +347,10 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
 
     if (e.deltaY > 0) {
       // Scroll down -> forward in time
-      nextTime = findNextSnap(map, currentTime, snap);
+      nextTime = findNextSnap(map, getCurrentTime(), snap);
     } else {
       // Scroll up -> backward in time
-      nextTime = findPreviousSnap(map, currentTime, snap);
+      nextTime = findPreviousSnap(map, getCurrentTime(), snap);
     }
 
     if (nextTime !== null) {
@@ -369,8 +374,8 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
       const boxTop = Math.min(y1, y2);
       const boxBottom = Math.max(y1, y2);
 
-      const viewStartTime = currentTime - 0.1;
-      const viewEndTime = currentTime + 1.0;
+      const viewStartTime = getCurrentTime() - 0.1;
+      const viewEndTime = getCurrentTime() + 1.0;
 
       const selectedKeys: Key[] = [];
       for (const key of map.keys) {
@@ -401,7 +406,7 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
       }
       return selectedKeys;
     },
-    [map.keys, currentTime, posToY],
+    [map.keys, posToY],
   );
 
   const handleClick = useCallback(
@@ -417,8 +422,8 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
       const laneWidth = rect.width / numLanes;
       const lane = Math.floor(x / laneWidth);
 
-      const viewStartTime = currentTime - 0.1;
-      const viewEndTime = currentTime + 1.0;
+      const viewStartTime = getCurrentTime() - 0.1;
+      const viewEndTime = getCurrentTime() + 1.0;
 
       let clickedKey: Key | null = null;
       let minDistance = Infinity; // distance in pixels on Y axis
@@ -472,7 +477,7 @@ export function DesignTab({ map, setMap, currentTime, seek, snap, setSnap }: Des
         }
       }
     },
-    [map.keys, currentTime, selectedKeyIds, posToY],
+    [map.keys, selectedKeyIds, posToY],
   );
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {

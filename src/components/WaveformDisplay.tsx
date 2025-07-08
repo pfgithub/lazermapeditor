@@ -10,7 +10,7 @@ import {
 interface WaveformDisplayProps {
   audioBuffer: AudioBuffer | null;
   isSongLoading: boolean;
-  currentTime: number;
+  getCurrentTime: () => number;
   map: Map;
   snap: Snap;
 }
@@ -96,7 +96,7 @@ const drawWaveform = (
   }
 };
 
-export function WaveformDisplay({ audioBuffer, isSongLoading, currentTime, map, snap }: WaveformDisplayProps) {
+export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, map, snap }: WaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -114,12 +114,17 @@ export function WaveformDisplay({ audioBuffer, isSongLoading, currentTime, map, 
       return;
     }
 
-    drawWaveform(ctx, width, height, audioBuffer, currentTime);
-    drawSnapMarkers(ctx, width, height, currentTime, map, snap);
-  }, [audioBuffer, map, snap, currentTime]);
+    drawWaveform(ctx, width, height, audioBuffer, getCurrentTime());
+    drawSnapMarkers(ctx, width, height, getCurrentTime(), map, snap);
+  }, [audioBuffer, map, snap]);
 
   useEffect(() => {
-    draw();
+    const next = () => {
+      draw();
+      return requestAnimationFrame(() => animationFrame = next());
+    }
+    let animationFrame = next();
+    return () => cancelAnimationFrame(animationFrame);
   }, [draw]);
 
   useEffect(() => {
