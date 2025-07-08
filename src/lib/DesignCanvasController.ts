@@ -19,7 +19,8 @@ type DragContext =
       type: "drag";
       initialMouseTime: number;
       initialMouseLane: number;
-      originalKeys: Map<Note, Note>; // Map from key ID to original key object
+      originalKeys: Set<Note>;
+      newKeys: Set<Note>;
     }
   | null;
 
@@ -57,7 +58,6 @@ export class DesignCanvasController {
   activeHolds: Map<0 | 1 | 2 | 3, number> = new Map();
   selectedKeyIds: Set<Note> = new Set();
   selectionBox: { x1: number; t1: number; x2: number; t2: number } | null = null;
-  draggedKeysPreview: Note[] | null = null;
 
   constructor(options: DesignCanvasControllerOptions) {
     this.canvas = options.canvas;
@@ -203,10 +203,10 @@ export class DesignCanvasController {
       if (isMultiSelect && isSelected) {
         this.dragContext = null;
       } else {
-        const keysToDrag = new Map<Note, Note>();
+        const keysToDrag = new Set<Note>();
         this.map.notes.forEach((k) => {
           if (this.selectedKeyIds.has(k)) {
-            keysToDrag.set(k, k);
+            keysToDrag.add(k);
           }
         });
 
@@ -215,6 +215,7 @@ export class DesignCanvasController {
           initialMouseTime: this.yToPos(y),
           initialMouseLane: Math.floor(x / laneWidth),
           originalKeys: keysToDrag,
+          newKeys: new Set(keysToDrag),
         };
       }
     } else {
@@ -274,16 +275,15 @@ export class DesignCanvasController {
         }
       }
 
-      const newKeys: Note[] = [];
+      context.newKeys.clear();
       for (const originalKey of context.originalKeys.values()) {
-        newKeys.push({
+        context.newKeys.add({
           ...originalKey,
           startTime: originalKey.startTime + timeDeltaToApply,
           endTime: originalKey.endTime + timeDeltaToApply,
           key: (originalKey.key + adjustedLaneDelta) as Note["key"],
         });
       }
-      this.draggedKeysPreview = newKeys;
     }
   }
 
@@ -314,17 +314,13 @@ export class DesignCanvasController {
       this.selectionBox = null;
     } else {
       // type is 'drag'
-      if (this.draggedKeysPreview) {
-        const draggedKeyOriginalIds = new Set(context.originalKeys.keys());
-        const otherKeys = this.map.notes.filter((k) => !draggedKeyOriginalIds.has(k));
+      const otherKeys = this.map.notes.filter((k) => !context.originalKeys.has(k));
 
-        const newKeys = [...otherKeys, ...this.draggedKeysPreview].sort((a, b) => a.startTime - b.startTime);
-        this.setMap({ ...this.map, notes: newKeys });
+      const newKeys = [...otherKeys, ...context.newKeys].sort((a, b) => a.startTime - b.startTime);
+      this.setMap({ ...this.map, notes: newKeys });
 
-        const newSelectedKeyIds = new Set(this.draggedKeysPreview);
-        this.selectedKeyIds = newSelectedKeyIds;
-      }
-      this.draggedKeysPreview = null;
+      const newSelectedKeyIds = new Set(context.newKeys);
+      this.selectedKeyIds = newSelectedKeyIds;
     }
     this.dragContext = null;
   }
@@ -490,8 +486,8 @@ export class DesignCanvasController {
     }
 
     // --- Draw Dragged Keys Preview ---
-    if (this.draggedKeysPreview) {
-      for (const key of this.draggedKeysPreview) {
+    if (this.dragContext?.type === "drag") {
+      for (const key of this.dragContext.newKeys) {
         if (key.endTime < viewStartTime || key.startTime > viewEndTime) continue;
         const y_start = this.posToY(key.startTime);
         const y_end = this.posToY(key.endTime);
