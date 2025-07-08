@@ -9,7 +9,8 @@ export type TimingSegment = {
 };
 
 export type Key = {
-  time: number;
+  startTime: number;
+  endTime: number;
   key: 0 | 1 | 2 | 3;
 };
 
