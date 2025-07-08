@@ -10,6 +10,7 @@ import type { Snap } from "./lib/timingPoints";
 import { AudioController } from "./lib/audio";
 import { Button } from "./components/ui/button";
 import { Pause, Play } from "lucide-react";
+import { allowKeyEvent } from "./lib/utils";
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -113,18 +114,7 @@ export function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
-
-      // Don't trigger when a text input, button, or other interactive element is focused.
-      const activeEl = document.activeElement;
-      if (
-        activeEl &&
-        (activeEl.tagName === "INPUT" ||
-          activeEl.tagName === "TEXTAREA" ||
-          activeEl.tagName === "SELECT" ||
-          activeEl.tagName === "BUTTON")
-      ) {
-        return;
-      }
+      if (!allowKeyEvent(e)) return;
 
       // Prevent repeated plays when holding space
       if (e.repeat) return;
@@ -142,18 +132,7 @@ export function App() {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
-
-      // Don't trigger if an interactive element is focused.
-      const activeEl = document.activeElement;
-      if (
-        activeEl &&
-        (activeEl.tagName === "INPUT" ||
-          activeEl.tagName === "TEXTAREA" ||
-          activeEl.tagName === "SELECT" ||
-          activeEl.tagName === "BUTTON")
-      ) {
-        return;
-      }
+      if (!allowKeyEvent(e)) return;
 
       // If we weren't in a "hold-to-play" state, do nothing.
       if (spaceDownTimeRef.current === null) {

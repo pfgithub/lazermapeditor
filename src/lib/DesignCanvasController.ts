@@ -6,6 +6,7 @@ import {
   getSnapForTime,
   type Snap,
 } from "@/lib/timingPoints";
+import { allowKeyEvent } from "./utils";
 
 type SetStateAction<S> = S | ((prevState: S) => S);
 
@@ -328,7 +329,7 @@ export class DesignCanvasController {
   public handleKeyDown(e: KeyboardEvent) {
     const keyIndex = keyMap[e.key.toLowerCase()];
     if (keyIndex === undefined || e.repeat) return;
-    if(!this.allowKeyEvent(e)) return;
+    if(!allowKeyEvent(e)) return;
 
     if (this.activeHolds.get(keyIndex) != null) return;
 
@@ -366,8 +367,7 @@ export class DesignCanvasController {
   public handleDelete(e: KeyboardEvent) {
     if (e.key !== "Backspace" && e.key !== "Delete") return;
     if (this.selectedKeyIds.size === 0) return;
-
-    if(!this.allowKeyEvent(e)) return;
+    if(!allowKeyEvent(e)) return;
 
     e.preventDefault();
 
@@ -375,19 +375,6 @@ export class DesignCanvasController {
 
     this.setMap({ ...this.map, notes: newKeys });
     this.selectedKeyIds.clear();
-  }
-
-  public allowKeyEvent(e: KeyboardEvent): boolean {
-    const activeEl = document.activeElement;
-    if (
-      activeEl &&
-      ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
-        activeEl.tagName === "TEXTAREA" ||
-        activeEl.tagName === "SELECT")
-    ) {
-      return false;
-    }
-    return true;
   }
 
   public draw() {
