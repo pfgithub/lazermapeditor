@@ -81,17 +81,26 @@ export function getSnapForTime(map: Map, time: number): Snap | undefined {
 }
 
 export function getColorForSnap(snap: Snap | undefined) {
-  // Vibrant colors for dark mode
-  if (snap === 1) return "hsl(0, 100%, 70%)"; // Red - Whole beats
-  if (snap === 4) return "hsl(0, 0%, 95%)"; // White - 1/4 beats
-  if (snap === 2) return "hsl(210, 100%, 70%)"; // Blue - 1/2 beats
-  if (snap === 8) return "hsl(60, 100%, 70%)"; // Yellow - 1/8 beats
-  if (snap === 16) return "hsl(280, 100%, 80%)"; // Purple - 1/16 beats
-
-  // Triplets
-  if (snap === 3) return "hsl(120, 100%, 65%)"; // Green - 1/3 beats
-  if (snap === 6) return "hsl(90, 100%, 75%)"; // Lime - 1/6 beats
-  if (snap === 12) return "hsl(30, 100%, 75%)"; // Orange - 1/12 beats
-  
-  return "hsl(240, 10%, 40%)"; // Grey for anything else (e.g. 1/24)
+  // osu!mania style colors
+  switch (snap) {
+    case 1:
+      return "hsl(0, 0%, 95%)"; // White
+    case 2:
+      return "hsl(0, 100%, 70%)"; // Red
+    case 4:
+      return "hsl(210, 100%, 70%)"; // Blue
+    case 8:
+      return "hsl(60, 100%, 70%)"; // Yellow
+    case 16:
+      return "hsl(280, 80%, 70%)"; // PurpleDark
+    case 3:
+      return "hsl(280, 100%, 80%)"; // Purple
+    case 6:
+      return "hsl(55, 90%, 65%)"; // YellowDark
+    case 12:
+      return "hsl(50, 80%, 60%)"; // YellowDarker
+    default:
+      // default from osu!stable is Red for other snaps (e.g. 1/24) or undefined
+      return "hsl(0, 100%, 70%)";
+  }
 }
