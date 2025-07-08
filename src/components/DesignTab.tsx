@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { Note, Beatmap } from "@/store";
-import { findNearestSnap, findNextSnap, findPreviousSnap, snapLevels, type Snap } from "@/lib/timingPoints";
+import { findNextSnap, findPreviousSnap, snapLevels, type Snap } from "@/lib/timingPoints";
 import { DesignCanvasController } from "@/lib/DesignCanvasController";
 
 interface DesignTabProps {
@@ -14,12 +14,11 @@ interface DesignTabProps {
   setSnap: (snap: Snap) => void;
 }
 
-const getKeyId = (key: Note): string => `${key.startTime}-${key.key}`;
-
 export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: DesignTabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<DesignCanvasController | null>(null);
+  const [selectionCount, setSelectionCount] = useState(0);
 
   // Initialize and update canvas controller
   useEffect(() => {
@@ -34,6 +33,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         snap,
         // Callbacks to update component state
         setMap,
+        onSelectionChange: setSelectionCount,
       });
     } else {
       controllerRef.current.update({
@@ -150,6 +150,14 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
             </Button>
           ))}
         </div>
+        <Button
+          onClick={() => controllerRef.current?.flipHorizontal()}
+          variant="outline"
+          size="sm"
+          disabled={selectionCount === 0}
+        >
+          Flip Horizontal
+        </Button>
       </div>
 
       <div

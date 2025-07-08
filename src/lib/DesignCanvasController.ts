@@ -37,6 +37,7 @@ export interface DesignCanvasControllerOptions {
   getCurrentTime: () => number;
   snap: Snap;
   setMap: (map: Beatmap) => void;
+  onSelectionChange?: (count: number) => void;
 }
 const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
   d: 0,
@@ -57,11 +58,12 @@ export class DesignCanvasController {
   private map: Beatmap;
   private getCurrentTime: () => number;
   private snap: Snap;
-  
+
   private setMap: (map: Beatmap) => void;
-  
+  private onSelectionChange: (count: number) => void;
+
   private dragContext: DragContext = null;
-  
+
   activeHolds: Map<0 | 1 | 2 | 3, number> = new Map();
   selectedKeyIds: Set<Note> = new Set();
   selectionBox: { x1: number; t1: number; x2: number; t2: number } | null = null;
@@ -79,13 +81,14 @@ export class DesignCanvasController {
     this.snap = options.snap;
 
     this.setMap = options.setMap;
+    this.onSelectionChange = options.onSelectionChange ?? (() => {});
   }
 
   public update(
     options: Partial<
       Omit<
         DesignCanvasControllerOptions,
-        "canvas" | "getCurrentTime" | "setMap" | "setSelectedKeyIds"
+        "canvas" | "getCurrentTime" | "setMap" | "onSelectionChange"
       >
     >,
   ) {
@@ -238,6 +241,7 @@ export class DesignCanvasController {
       };
       this.selectionBox = { x1: x, t1: time, x2: x, t2: time };
     }
+    this.onSelectionChange(this.selectedKeyIds.size);
   }
 
   public handleMouseMove(e: MouseEvent) {
@@ -330,6 +334,7 @@ export class DesignCanvasController {
       this.selectedKeyIds = newSelectedKeyIds;
     }
     this.dragContext = null;
+    this.onSelectionChange(this.selectedKeyIds.size);
   }
 
   private async handleCopy() {
@@ -398,6 +403,7 @@ export class DesignCanvasController {
 
       // Select the new notes.
       newNotes.forEach((note) => this.selectedKeyIds.add(note));
+      this.onSelectionChange(this.selectedKeyIds.size);
     } catch (err) {
       console.warn("Failed to paste notes from clipboard:", err);
     }
@@ -410,6 +416,31 @@ export class DesignCanvasController {
 
     this.setMap({ ...this.map, notes: newKeys });
     this.selectedKeyIds.clear();
+    this.onSelectionChange(this.selectedKeyIds.size);
+  }
+
+  public flipHorizontal() {
+    if (this.selectedKeyIds.size === 0) return;
+
+    const newFlippedNotes: Note[] = [];
+    const selectedNotes = this.selectedKeyIds;
+
+    for (const note of selectedNotes) {
+      const newNote: Note = {
+        ...note,
+        key: (3 - note.key) as Note["key"],
+      };
+      newFlippedNotes.push(newNote);
+    }
+
+    const unselectedNotes = this.map.notes.filter((note) => !selectedNotes.has(note));
+
+    const allNotes = [...unselectedNotes, ...newFlippedNotes].sort((a, b) => a.startTime - b.startTime);
+
+    this.setMap({ ...this.map, notes: allNotes });
+
+    this.selectedKeyIds = new Set(newFlippedNotes);
+    this.onSelectionChange(this.selectedKeyIds.size);
   }
 
   public handleKeyDown(e: KeyboardEvent) {
