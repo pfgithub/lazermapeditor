@@ -20,6 +20,7 @@ function formatTime(seconds: number) {
 export function App() {
   const { map, song, setMap, setSongFile, loadFromDb, isInitialized } = useAppStore();
   const audioControllerRef = useRef<AudioController | null>(null);
+  const spaceDownTimeRef = useRef<number | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [isSongLoading, setIsSongLoading] = useState(false);
 
@@ -108,16 +109,16 @@ export function App() {
     };
   }, []);
 
-  // Global keybinding for play/pause
+  // Global keybinding for hold-space-to-play
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
 
-      // Don't trigger when a text input, button, or the audio player is focused.
+      // Don't trigger when a text input, button, or other interactive element is focused.
       const activeEl = document.activeElement;
       if (
         activeEl &&
-        ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
+        (activeEl.tagName === "INPUT" ||
           activeEl.tagName === "TEXTAREA" ||
           activeEl.tagName === "SELECT" ||
           activeEl.tagName === "BUTTON")
@@ -125,23 +126,63 @@ export function App() {
         return;
       }
 
-      // Prevent repeated toggling when holding space
+      // Prevent repeated plays when holding space
       if (e.repeat) return;
+
+      e.preventDefault();
+      const controller = audioControllerRef.current;
+      // If there's no controller or audio is already playing, do nothing.
+      if (!controller || controller.getIsPlaying()) {
+        return;
+      }
+
+      spaceDownTimeRef.current = controller.getCurrentTime();
+      controller.play();
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+
+      // Don't trigger if an interactive element is focused.
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.tagName === "SELECT" ||
+          activeEl.tagName === "BUTTON")
+      ) {
+        return;
+      }
+
+      // If we weren't in a "hold-to-play" state, do nothing.
+      if (spaceDownTimeRef.current === null) {
+        return;
+      }
 
       e.preventDefault();
       const controller = audioControllerRef.current;
       if (!controller) return;
 
-      if (controller.getIsPlaying()) {
-        controller.pause();
-      } else {
-        controller.play();
-      }
+      controller.pause();
+      controller.seek(spaceDownTimeRef.current);
+      spaceDownTimeRef.current = null;
     };
 
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+
+      // Cleanup in case the component unmounts while space is held down
+      const controller = audioControllerRef.current;
+      if (controller && spaceDownTimeRef.current !== null) {
+        controller.pause();
+        controller.seek(spaceDownTimeRef.current);
+        spaceDownTimeRef.current = null;
+      }
     };
   }, []);
 
