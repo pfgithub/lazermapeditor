@@ -333,17 +333,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
       const keyIndex = keyMap[e.key.toLowerCase()];
       if (keyIndex === undefined) return;
 
-      const activeEl = document.activeElement;
-      if (
-        activeEl &&
-        ((activeEl.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "text") ||
-          activeEl.tagName === "TEXTAREA" ||
-          activeEl.tagName === "SELECT" ||
-          activeEl.tagName === "BUTTON")
-      ) {
-        return;
-      }
-
       const startTime = activeHoldsRef.current[keyIndex];
       if (startTime === undefined) return;
 
