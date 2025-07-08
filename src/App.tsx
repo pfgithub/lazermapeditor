@@ -153,14 +153,14 @@ export function App() {
 
   if (!isInitialized) {
     return (
-      <div className="w-screen h-screen flex items-center justify-center bg-background text-foreground">
+      <div className="w-screen h-screen flex items-center justify-center bg-[hsl(222.2,84%,4.9%)] text-[hsl(210,40%,98%)]">
         <p>Loading project from database...</p>
       </div>
     );
   }
 
   return (
-    <main className="w-screen h-screen flex flex-col bg-background text-foreground p-4 gap-4">
+    <main className="w-screen h-screen flex flex-col bg-[hsl(222.2,84%,4.9%)] text-[hsl(210,40%,98%)] p-4 gap-4">
       <Tabs
         defaultValue="metadata"
         className="w-full flex-grow flex flex-col gap-4 min-h-0"
@@ -200,7 +200,7 @@ export function App() {
           />
         </div>
         {song?.url ? (
-          <div className="flex items-center gap-4 bg-card border border-border p-3 rounded-lg h-[60px]">
+          <div className="flex items-center gap-4 bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] p-3 rounded-lg h-[60px]">
             <Button
               onClick={() => {
                 const controller = audioControllerRef.current;
@@ -218,7 +218,7 @@ export function App() {
                 <Play className="h-5 w-5" />
               )}
             </Button>
-            <div className="text-sm font-mono w-28 text-center text-muted-foreground">
+            <div className="text-sm font-mono w-28 text-center text-[hsl(215,20.2%,65.1%)]">
               {formatTime(currentTimeRounded)} / {formatTime(duration)}
             </div>
             <input
@@ -227,12 +227,12 @@ export function App() {
               max={duration || 1}
               value={currentTimeRounded}
               step="0.01"
-              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-[hsl(217.2,32.6%,17.5%)] rounded-lg appearance-none cursor-pointer"
               onChange={(e) => handleSeek(parseFloat(e.target.value))}
             />
           </div>
         ) : (
-          <div className="text-center text-muted-foreground bg-card border border-border p-3 rounded-lg h-[60px] flex items-center justify-center">
+          <div className="text-center text-[hsl(215,20.2%,65.1%)] bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] p-3 rounded-lg h-[60px] flex items-center justify-center">
             Please select a song in the Metadata tab.
           </div>
         )}

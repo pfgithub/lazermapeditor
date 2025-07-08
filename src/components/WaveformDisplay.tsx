@@ -100,13 +100,7 @@ const drawWaveform = (
 export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, map, snap }: WaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [primaryColor, setPrimaryColor] = useState("hsl(var(--primary) / 0.6)");
-
-  useEffect(() => {
-    const computedStyle = getComputedStyle(document.documentElement);
-    const primary = computedStyle.getPropertyValue('--primary').trim();
-    setPrimaryColor(`hsl(${primary} / 0.6)`);
-  }, []);
+  const [primaryColor, setPrimaryColor] = useState("hsl(217.2 91.2% 59.8% / 0.6)");
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -169,9 +163,9 @@ export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, ma
   }, [draw]);
 
   return (
-    <div ref={containerRef} className="w-full h-full relative bg-muted/50 rounded-lg overflow-hidden border">
+    <div ref={containerRef} className="w-full h-full relative bg-[hsl(217.2,32.6%,17.5%)]/50 rounded-lg overflow-hidden border border-[hsl(217.2,32.6%,17.5%)]">
       <canvas ref={canvasRef} className="absolute top-0 left-0" />
-      <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm p-4 text-center pointer-events-none">
+      <div className="absolute inset-0 flex items-center justify-center text-[hsl(215,20.2%,65.1%)] text-sm p-4 text-center pointer-events-none">
         {isSongLoading ? (
           <p>Loading song...</p>
         ) : !audioBuffer ? (

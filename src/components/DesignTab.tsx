@@ -35,22 +35,10 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const isDraggingRef = useRef(false);
 
   const [themeColors, setThemeColors] = useState({
-    border: "hsl(240 3.7% 15.9%)",
-    ring: "hsl(240 4.9% 83.9%)",
-    ringTransparent: "hsla(240 4.9% 83.9%, 0.2)",
+    border: "hsl(217.2 32.6% 17.5%)",
+    ring: "hsl(217.2 91.2% 59.8%)",
+    ringTransparent: "hsla(217.2 91.2% 59.8%, 0.2)",
   });
-
-  useEffect(() => {
-    // We need to get the resolved CSS variables to use them in the Canvas API.
-    const computedStyle = getComputedStyle(document.documentElement);
-    const border = computedStyle.getPropertyValue("--border").trim();
-    const ring = computedStyle.getPropertyValue("--ring").trim();
-    setThemeColors({
-      border: `hsl(${border})`,
-      ring: `hsl(${ring})`,
-      ringTransparent: `hsla(${ring}, 0.2)`,
-    });
-  }, []);
 
   // Memoized function to convert time to a Y-coordinate on the canvas
   const posToY = useCallback(
@@ -565,7 +553,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
 
   return (
     <div className="flex flex-col h-full gap-4">
-      <div className="flex items-center justify-between p-3 bg-card border rounded-lg shrink-0">
+      <div className="flex items-center justify-between p-3 bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg shrink-0">
         <div className="flex items-center gap-2">
           <Label>Snap:</Label>
           {snapLevels.map((level) => (
@@ -577,7 +565,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
       </div>
 
       <div
-        className="flex-grow relative bg-card border rounded-lg overflow-hidden"
+        className="flex-grow relative bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg overflow-hidden"
         ref={containerRef}
         onWheel={handleWheel}
         onMouseMove={handleMouseMove}

@@ -21,7 +21,7 @@ export function MetadataTab({ song, setSong }: MetadataTabProps) {
   };
 
   return (
-    <div className="p-4 h-full overflow-y-auto bg-card rounded-lg border">
+    <div className="p-4 h-full overflow-y-auto bg-[hsl(224,71%,4%)] rounded-lg border border-[hsl(217.2,32.6%,17.5%)]">
       <form className="grid gap-4 max-w-2xl mx-auto">
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="map-name" className="text-right">
@@ -63,7 +63,7 @@ export function MetadataTab({ song, setSong }: MetadataTabProps) {
             <Button type="button" onClick={() => songInputRef.current?.click()} variant="outline">
               Select Song
             </Button>
-            <span className="text-sm text-muted-foreground truncate">{song?.name ?? "No song selected."}</span>
+            <span className="text-sm text-[hsl(215,20.2%,65.1%)] truncate">{song?.name ?? "No song selected."}</span>
           </div>
         </div>
       </form>

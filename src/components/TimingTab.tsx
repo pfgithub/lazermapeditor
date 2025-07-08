@@ -52,12 +52,12 @@ export function TimingTab({ map, setMap, songUrl, getCurrentTime }: TimingTabPro
   };
 
   return (
-    <div className="flex flex-row h-full bg-card rounded-lg border overflow-hidden">
+    <div className="flex flex-row h-full bg-[hsl(224,71%,4%)] rounded-lg border border-[hsl(217.2,32.6%,17.5%)] overflow-hidden">
       <div className="flex-grow flex flex-col gap-4 p-4">
         {/* Top section: Player and Add button */}
         <div className="flex flex-col gap-2">
           {!songUrl && (
-            <div className="text-center text-muted-foreground p-4 bg-muted rounded-md h-[54px] flex items-center justify-center">
+            <div className="text-center text-[hsl(215,20.2%,65.1%)] p-4 bg-[hsl(217.2,32.6%,17.5%)] rounded-md h-[54px] flex items-center justify-center">
               Please select a song in the Metadata tab to enable timing controls.
             </div>
           )}
@@ -67,7 +67,7 @@ export function TimingTab({ map, setMap, songUrl, getCurrentTime }: TimingTabPro
         </div>
 
         {/* List of segments */}
-        <div className="flex-grow overflow-y-auto border rounded-md bg-background">
+        <div className="flex-grow overflow-y-auto border border-[hsl(217.2,32.6%,17.5%)] rounded-md bg-[hsl(222.2,84%,4.9%)]">
           <ul className="p-1">
             {map.timing.length > 0 ? (
               map.timing.map((segment) => (
@@ -75,8 +75,8 @@ export function TimingTab({ map, setMap, songUrl, getCurrentTime }: TimingTabPro
                   key={segment.id}
                   onClick={() => setSelectedSegmentId(segment.id)}
                   className={cn(
-                    "p-2 cursor-pointer hover:bg-accent rounded-md text-sm flex justify-between items-center",
-                    selectedSegmentId === segment.id && "bg-accent",
+                    "p-2 cursor-pointer hover:bg-[hsl(217.2,32.6%,17.5%)] rounded-md text-sm flex justify-between items-center",
+                    selectedSegmentId === segment.id && "bg-[hsl(217.2,32.6%,17.5%)]",
                   )}
                 >
                   <span>
@@ -88,7 +88,7 @@ export function TimingTab({ map, setMap, songUrl, getCurrentTime }: TimingTabPro
                 </li>
               ))
             ) : (
-              <div className="text-center text-muted-foreground p-4">No timing segments added.</div>
+              <div className="text-center text-[hsl(215,20.2%,65.1%)] p-4">No timing segments added.</div>
             )}
           </ul>
         </div>
@@ -96,7 +96,7 @@ export function TimingTab({ map, setMap, songUrl, getCurrentTime }: TimingTabPro
 
       {/* Right sidebar: Editor */}
       {selectedSegment && (
-        <aside className="w-80 border-l bg-card p-4 flex flex-col gap-4 shrink-0">
+        <aside className="w-80 border-l border-l-[hsl(217.2,32.6%,17.5%)] bg-[hsl(224,71%,4%)] p-4 flex flex-col gap-4 shrink-0">
           <h2 className="text-lg font-semibold">Edit Segment</h2>
           <div className="grid gap-1.5">
             <Label htmlFor="startTime">Start Time (s)</Label>
