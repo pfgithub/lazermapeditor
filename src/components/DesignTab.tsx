@@ -21,8 +21,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<DesignCanvasController | null>(null);
 
-  const activeHoldsRef = useRef<Partial<Record<0 | 1 | 2 | 3, number>>>({});
-
   const [themeColors, setThemeColors] = useState({
     border: "hsl(217.2 32.6% 17.5%)",
     ring: "hsl(217.2 91.2% 59.8%)",
@@ -41,7 +39,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         getCurrentTime,
         snap,
         themeColors,
-        activeHolds: activeHoldsRef.current,
         // Callbacks to update component state
         setMap,
       });
@@ -50,7 +47,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         map,
         snap,
         themeColors,
-        activeHolds: activeHoldsRef.current,
       });
     }
   }); // Runs on every render to keep controller props in sync
@@ -66,70 +62,20 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
     return () => cancelAnimationFrame(animationFrame);
   }, []);
 
+  const handleKeyDown = (e: KeyboardEvent) => {
+    controllerRef.current?.handleKeyDown(e);
+    controllerRef.current?.handleDelete(e);
+  };
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    controllerRef.current?.handleKeyUp(e);
+  };
   useEffect(() => {
-    const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
-      d: 0,
-      f: 1,
-      j: 2,
-      k: 3,
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const keyIndex = keyMap[e.key.toLowerCase()];
-      if (keyIndex === undefined || e.repeat) return;
-      if(!controllerRef.current?.allowKeyEvent(e)) return;
-
-      if (activeHoldsRef.current[keyIndex] !== undefined) return;
-
-      const nearestTime = findNearestSnap(map, getCurrentTime(), snap);
-      if (nearestTime === null) return;
-
-      e.preventDefault();
-      activeHoldsRef.current[keyIndex] = nearestTime;
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      const keyIndex = keyMap[e.key.toLowerCase()];
-      if (keyIndex === undefined) return;
-
-      const startTime = activeHoldsRef.current[keyIndex];
-      if (startTime === undefined) return;
-
-      delete activeHoldsRef.current[keyIndex];
-
-      const endTime = findNearestSnap(map, getCurrentTime(), snap);
-      if (endTime === null) return;
-
-      const newKey: Key = {
-        startTime,
-        endTime: Math.max(startTime, endTime),
-        key: keyIndex,
-      };
-
-      if (map.keys.some((k) => k.startTime === newKey.startTime && k.key === newKey.key)) {
-        return;
-      }
-
-      const newKeys = [...map.keys, newKey].sort((a, b) => a.startTime - b.startTime);
-      setMap({ ...map, keys: newKeys });
-    };
-
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, [map, setMap, snap, getCurrentTime]);
-
-  const handleDelete = (e: KeyboardEvent) => {
-    controllerRef.current?.handleDelete(e);
-  }
-  // Key deletion handler
-  useEffect(() => {
-    window.addEventListener("keydown", handleDelete);
-    return () => {
-      window.removeEventListener("keydown", handleDelete);
     };
   }, []);
 

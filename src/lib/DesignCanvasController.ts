@@ -35,9 +35,14 @@ export interface DesignCanvasControllerOptions {
     ring: string;
     ringTransparent: string;
   };
-  activeHolds: Partial<Record<0 | 1 | 2 | 3, number>>;
   setMap: (map: Map) => void;
 }
+const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
+  d: 0,
+  f: 1,
+  j: 2,
+  k: 3,
+};
 
 export class DesignCanvasController {
   private canvas: HTMLCanvasElement;
@@ -46,12 +51,12 @@ export class DesignCanvasController {
   private getCurrentTime: () => number;
   private snap: Snap;
   private themeColors: { border: string; ring: string; ringTransparent: string };
-  private activeHolds: Partial<Record<0 | 1 | 2 | 3, number>>;
   
   private setMap: (map: Map) => void;
   
   private dragContext: DragContext = null;
-
+  
+  activeHolds: Map<0 | 1 | 2 | 3, number> = new Map();
   selectedKeyIds: Set<string> = new Set();
   selectionBox: { x1: number; t1: number; x2: number; t2: number } | null = null;
   draggedKeysPreview: Key[] | null = null;
@@ -68,7 +73,6 @@ export class DesignCanvasController {
     this.getCurrentTime = options.getCurrentTime;
     this.snap = options.snap;
     this.themeColors = options.themeColors;
-    this.activeHolds = options.activeHolds;
 
     this.setMap = options.setMap;
   }
@@ -325,6 +329,44 @@ export class DesignCanvasController {
     this.dragContext = null;
   }
 
+  public handleKeyDown(e: KeyboardEvent) {
+    const keyIndex = keyMap[e.key.toLowerCase()];
+    if (keyIndex === undefined || e.repeat) return;
+    if(!this.allowKeyEvent(e)) return;
+
+    if (this.activeHolds.get(keyIndex) != null) return;
+
+    const nearestTime = findNearestSnap(this.map, this.getCurrentTime(), this.snap);
+    if (nearestTime === null) return;
+
+    e.preventDefault();
+    this.activeHolds.set(keyIndex, nearestTime);
+  }
+  public handleKeyUp(e: KeyboardEvent) {
+    const keyIndex = keyMap[e.key.toLowerCase()];
+    if (keyIndex === undefined) return;
+
+    const startTime = this.activeHolds.get(keyIndex);
+    if (startTime == null) return;
+
+    this.activeHolds.delete(keyIndex);
+
+    const endTime = findNearestSnap(this.map, this.getCurrentTime(), this.snap);
+    if (endTime == null) return;
+
+    const newKey: Key = {
+      startTime,
+      endTime: Math.max(startTime, endTime),
+      key: keyIndex,
+    };
+
+    if (this.map.keys.some((k) => k.startTime === newKey.startTime && k.key === newKey.key)) {
+      return;
+    }
+
+    const newKeys = [...this.map.keys, newKey].sort((a, b) => a.startTime - b.startTime);
+    this.setMap({ ...this.map, keys: newKeys });
+  }
   public handleDelete(e: KeyboardEvent) {
     if (e.key !== "Backspace" && e.key !== "Delete") return;
     if (this.selectedKeyIds.size === 0) return;
@@ -439,7 +481,7 @@ export class DesignCanvasController {
     }
 
     // --- Draw in-progress notes ---
-    for (const [lane, startTime] of Object.entries(this.activeHolds)) {
+    for (const [lane, startTime] of this.activeHolds.entries()) {
       drawKey({
         startTime,
         endTime: findNearestSnap(this.map, time, this.snap) ?? time,
