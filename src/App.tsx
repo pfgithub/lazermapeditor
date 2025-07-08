@@ -32,12 +32,6 @@ export function App() {
   // precise time must not be stored in state to prevent excessive rerenders
   const [currentTimeRounded, setCurrentTimeRounded] = useState(0);
 
-  const snapForWaveform = useMemo((): Snap => {
-    if (activeTab === "timing") return 16;
-    if (activeTab === "design") return designSnap;
-    return 4; // Default snap for other tabs
-  }, [activeTab, designSnap]);
-
   useEffect(() => {
     loadFromDb();
   }, [loadFromDb]);
@@ -216,7 +210,7 @@ export function App() {
             isSongLoading={isSongLoading}
             getCurrentTime={getCurrentTime}
             map={map}
-            snap={snapForWaveform}
+            snap={designSnap}
           />
         </div>
         {song?.url ? (
