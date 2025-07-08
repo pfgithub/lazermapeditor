@@ -2,6 +2,7 @@ const sourceForm = document.getElementById("source-form")! as HTMLFormElement;
 const resultForm = document.getElementById("result-form")! as HTMLFormElement;
 const resultFormDialog = document.getElementById("result-form-dialog") as HTMLDialogElement;
 const closeDialogButton = document.getElementById("close-dialog")!;
+const resultTextarea = document.getElementById("result-textarea") as HTMLTextAreaElement;
 
 sourceForm.addEventListener("submit", async e => {
     e.preventDefault();
@@ -12,7 +13,7 @@ sourceForm.addEventListener("submit", async e => {
     const prompt = formData.get("prompt");
     const total = `<prompt>\n${prompt}\n</prompt>\n${filesText}`;
     await navigator.clipboard.writeText(total);
-    // Use showModal() for proper modal behavior and centering
+    resultTextarea.value = "";
     resultFormDialog.showModal();
 });
 
