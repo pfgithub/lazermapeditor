@@ -24,9 +24,6 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const activeHoldsRef = useRef<Partial<Record<0 | 1 | 2 | 3, number>>>({});
   const [selectedKeyIds, setSelectedKeyIds] = useState<Set<string>>(new Set());
 
-  // For visual feedback during drag
-  const [draggedKeysPreview, setDraggedKeysPreview] = useState<Key[] | null>(null);
-
   const [themeColors, setThemeColors] = useState({
     border: "hsl(217.2 32.6% 17.5%)",
     ring: "hsl(217.2 91.2% 59.8%)",
@@ -45,20 +42,17 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         getCurrentTime,
         snap,
         selectedKeyIds,
-        draggedKeysPreview,
         themeColors,
         activeHolds: activeHoldsRef.current,
         // Callbacks to update component state
         setMap,
         setSelectedKeyIds,
-        setDraggedKeysPreview,
       });
     } else {
       controllerRef.current.update({
         map,
         snap,
         selectedKeyIds,
-        draggedKeysPreview,
         themeColors,
         activeHolds: activeHoldsRef.current,
       });

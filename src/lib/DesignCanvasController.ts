@@ -31,7 +31,6 @@ export interface DesignCanvasControllerOptions {
   getCurrentTime: () => number;
   snap: Snap;
   selectedKeyIds: Set<string>;
-  draggedKeysPreview: Key[] | null;
   themeColors: {
     border: string;
     ring: string;
@@ -40,7 +39,6 @@ export interface DesignCanvasControllerOptions {
   activeHolds: Partial<Record<0 | 1 | 2 | 3, number>>;
   setMap: (map: Map) => void;
   setSelectedKeyIds: (value: SetStateAction<Set<string>>) => void;
-  setDraggedKeysPreview: (keys: Key[] | null) => void;
 }
 
 export class DesignCanvasController {
@@ -50,16 +48,16 @@ export class DesignCanvasController {
   private getCurrentTime: () => number;
   private snap: Snap;
   private selectedKeyIds: Set<string>;
-  private draggedKeysPreview: Key[] | null;
-  private selectionBox: { x1: number; t1: number; x2: number; t2: number } | null;
   private themeColors: { border: string; ring: string; ringTransparent: string };
   private activeHolds: Partial<Record<0 | 1 | 2 | 3, number>>;
-
+  
   private setMap: (map: Map) => void;
   private setSelectedKeyIds: (value: SetStateAction<Set<string>>) => void;
-  private setDraggedKeysPreview: (keys: Key[] | null) => void;
-
+  
   private dragContext: DragContext = null;
+
+  selectionBox: { x1: number; t1: number; x2: number; t2: number } | null = null;
+  draggedKeysPreview: Key[] | null = null;
 
   constructor(options: DesignCanvasControllerOptions) {
     this.canvas = options.canvas;
@@ -73,20 +71,18 @@ export class DesignCanvasController {
     this.getCurrentTime = options.getCurrentTime;
     this.snap = options.snap;
     this.selectedKeyIds = options.selectedKeyIds;
-    this.draggedKeysPreview = options.draggedKeysPreview;
     this.themeColors = options.themeColors;
     this.activeHolds = options.activeHolds;
 
     this.setMap = options.setMap;
     this.setSelectedKeyIds = options.setSelectedKeyIds;
-    this.setDraggedKeysPreview = options.setDraggedKeysPreview;
   }
 
   public update(
     options: Partial<
       Omit<
         DesignCanvasControllerOptions,
-        "canvas" | "getCurrentTime" | "setMap" | "setSelectedKeyIds" | "setDraggedKeysPreview"
+        "canvas" | "getCurrentTime" | "setMap" | "setSelectedKeyIds"
       >
     >,
   ) {
@@ -295,7 +291,7 @@ export class DesignCanvasController {
           key: (originalKey.key + adjustedLaneDelta) as Key["key"],
         });
       }
-      this.setDraggedKeysPreview(newKeys);
+      this.draggedKeysPreview = newKeys;
     }
   }
 
@@ -340,7 +336,7 @@ export class DesignCanvasController {
         const newSelectedKeyIds = new Set(this.draggedKeysPreview.map(getKeyId));
         this.setSelectedKeyIds(newSelectedKeyIds);
       }
-      this.setDraggedKeysPreview(null);
+      this.draggedKeysPreview = null;
     }
     this.dragContext = null;
   }
