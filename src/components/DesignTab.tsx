@@ -116,7 +116,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
 
     let nextTime: number | null = null;
 
-    if (e.deltaY > 0) {
+    if (e.deltaY < 0) {
       // Scroll down -> forward in time
       nextTime = findNextSnap(map, getCurrentTime(), snap);
     } else {
