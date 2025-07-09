@@ -82,14 +82,34 @@ export class AudioController {
   public seek(time: number) {
     if (!this.audioBuffer) return;
     const newTime = Math.max(0, Math.min(time, this.audioBuffer.duration));
-
-    const wasPlaying = this.isPlaying;
-    if (wasPlaying) {
-      this.pause();
-    }
     this.startOffset = newTime;
-    if (wasPlaying) {
-      this.play();
+
+    if (this.isPlaying) {
+      // If playing, stop the current source and start a new one at the new offset.
+      // This avoids flickering the isPlaying state in React components.
+      if (this.sourceNode) {
+        this.sourceNode.onended = null; // Prevent onended from firing on manual stop
+        this.sourceNode.stop();
+        this.sourceNode.disconnect();
+      }
+
+      this.sourceNode = this.audioContext.createBufferSource();
+      this.sourceNode.buffer = this.audioBuffer;
+      this.sourceNode.connect(this.audioContext.destination);
+
+      this.sourceNode.onended = () => {
+        // This logic runs only when the audio finishes playing naturally.
+        if (this.isPlaying) {
+          this.isPlaying = false;
+          this.onPause();
+          // Reset to beginning
+          this.startOffset = 0;
+          this.onEnded();
+        }
+      };
+
+      this.sourceNode.start(0, this.startOffset % this.audioBuffer.duration);
+      this.startTime = this.audioContext.currentTime;
     }
   }
 

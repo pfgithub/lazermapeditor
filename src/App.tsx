@@ -65,7 +65,7 @@ export function App() {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isPlaying]);
+  }, []);
 
   // Load song when URL changes
   useEffect(() => {
