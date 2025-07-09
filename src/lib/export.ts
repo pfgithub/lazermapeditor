@@ -1,4 +1,3 @@
-```typescript
 import type { Beatmap, Song } from "@/store";
 
 /**
@@ -114,4 +113,3 @@ export function exportToOsuFile(map: Beatmap, song: Song | null): string {
 
   return lines.join("\r\n");
 }
-```

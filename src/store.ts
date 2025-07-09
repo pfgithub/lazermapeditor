@@ -1,4 +1,3 @@
-```typescript
 import { create } from "zustand";
 import { getMap, saveMap, getSongFile, saveSongFile, clearSongFile } from "./db";
 
@@ -97,4 +96,3 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 }));
-```

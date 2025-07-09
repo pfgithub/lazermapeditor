@@ -1,4 +1,3 @@
-```typescript
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,4 +122,3 @@ export function MetadataTab({ map, setMap, song, setSong }: MetadataTabProps) {
     </div>
   );
 }
-```
