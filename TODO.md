@@ -10,3 +10,14 @@ TODO:
 - [ ] play then scroll somewhere. broken!
 - [ ] Display notes on the waveform
 - [x] scroll is inverted, flip it
+
+Export:
+
+- [ ] does it work at all?
+- [ ] bpm normalization
+- [ ] generate the full .osz file
+- [ ] import from .osz file
+
+Features:
+
+- [ ] sv mapping that preserves relative note position
