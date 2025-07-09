@@ -560,6 +560,7 @@ export class DesignCanvasController {
 
     const drawKey = (key: Note, isSelected: boolean) => {
       if (key.endTime < viewStartTime || key.startTime > viewEndTime) return;
+      if (key.endTime < time - 0.0001) return; // make notes disappear as soon as they go past the line
 
       const y_start = this.posToY(key.startTime);
       const y_end = this.posToY(key.endTime);
