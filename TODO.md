@@ -17,6 +17,7 @@ TODO:
 - [ ] Need to do the binary search optimizations to reduce the performance impact of having thousands of notes
 - [ ] consider trying out a keyboard-only workflow: place notes with `dfjk`. place over a note to erase. advance with `;`, de-vance with `a`. hold space to play. 
   - simple to try, add support for 'a' to go back and ';' to go forwards. also add pressing a note over a note deletes it, which we want anyway
+- [ ] add keybind settings
 
 Export:
 
