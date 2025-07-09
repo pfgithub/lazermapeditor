@@ -504,12 +504,19 @@ export class DesignCanvasController {
       key: keyIndex,
     };
 
-    if (this.map.notes.some((k) => k.startTime === newKey.startTime && k.key === newKey.key)) {
-      return;
-    }
+    const existingNote = this.map.notes.find(
+      (k) => k.startTime === newKey.startTime && k.key === newKey.key,
+    );
 
-    const newKeys = [...this.map.notes, newKey].sort((a, b) => a.startTime - b.startTime);
-    this.setMap({ ...this.map, notes: newKeys });
+    if (existingNote) {
+      // Note exists, delete it.
+      const newKeys = this.map.notes.filter(note => note !== existingNote);
+      this.setMap({ ...this.map, notes: newKeys });
+    } else {
+      // Note does not exist, add it.
+      const newKeys = [...this.map.notes, newKey].sort((a, b) => a.startTime - b.startTime);
+      this.setMap({ ...this.map, notes: newKeys });
+    }
   }
 
   public draw() {
