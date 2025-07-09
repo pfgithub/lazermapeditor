@@ -14,6 +14,7 @@ TODO:
 - [ ] Add the ability to drag the end of a hold note to change its length
 - [ ] Effects when a note passes below the line. It needs to disappear and play an effect and play its hitsound
 - [ ] Before the first time you press space to play you have to click
+- [ ] Need to do the binary search optimizations to reduce the performance impact of having thousands of notes
 
 Export:
 
