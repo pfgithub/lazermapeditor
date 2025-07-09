@@ -1,4 +1,3 @@
-```typescript
 import { useCallback, useEffect, useRef, type WheelEvent } from "react";
 import type { Beatmap } from "@/store";
 import {
@@ -265,4 +264,3 @@ export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, ma
     </div>
   );
 }
-```

@@ -1,4 +1,3 @@
-```typescript
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DesignTab } from "@/components/DesignTab";
 import { MetadataTab } from "@/components/MetadataTab";
@@ -269,4 +268,3 @@ export function App() {
 }
 
 export default App;
-```
