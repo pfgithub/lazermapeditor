@@ -10,6 +10,8 @@ TODO:
 - [ ] play then scroll somewhere. broken!
 - [ ] Display notes on the waveform
 - [x] scroll is inverted, flip it
+- [ ] Implement undo/redo
+- [ ] Add the ability to drag the end of a hold note to change its length
 
 Export:
 
