@@ -21,10 +21,8 @@ function parseOutput(output: string): FileOperation[] {
 	for (const match of output.matchAll(regex)) {
 		const [, rawTag, path, content] = match;
 
-		// The content might have leading/trailing newlines from the AI's formatting,
-		// so we trim them. The first and last line of the content block specifically.
 		const cleanedContent = content
-			? content.replace(/^\s*\n(```.+?\n)?|(\n```)?\n\s*$/g, "")
+			? content.replace(/^\s*(```.+?\n)?|(\n```)?\s*$/g, "")
 			: undefined;
 
 		switch (rawTag) {
