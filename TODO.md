@@ -18,7 +18,9 @@ TODO:
 - [x] consider trying out a keyboard-only workflow: place notes with `dfjk`. place over a note to erase. advance with `;`, de-vance with `a`. hold space to play. 
   - simple to try, add support for 'a' to go back and ';' to go forwards. also add pressing a note over a note deletes it, which we want anyway
   - I don't like it
-- [ ] add keybind settings
+- [x] add keybind settings
+- [ ] Enable setting two keys for each keybind. Default 'Delete Selection' to both 'Delete' and 'Backspace'. Default 'Place Note 3' to 'KeyJ and KeyG' and Place Note 4 to KeyK and KeyH
+  - ran it once but it generated a diff
 
 Export:
 
