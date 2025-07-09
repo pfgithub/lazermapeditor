@@ -35,6 +35,11 @@ export class AudioController {
       this.audioContext.resume();
     }
 
+    if (this.sourceNode) {
+      this.sourceNode.stop();
+      this.sourceNode.disconnect();
+      this.sourceNode = null;
+    }
     this.sourceNode = this.audioContext.createBufferSource();
     this.sourceNode.buffer = this.audioBuffer;
     this.sourceNode.connect(this.audioContext.destination);
