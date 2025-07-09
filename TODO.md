@@ -12,6 +12,7 @@ TODO:
 - [x] scroll is inverted, flip it
 - [ ] Implement undo/redo
 - [ ] Add the ability to drag the end of a hold note to change its length
+- [ ] Effects when a note passes below the line. It needs to disappear and play an effect and play its hitsound
 
 Export:
 
