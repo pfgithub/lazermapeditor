@@ -1,12 +1,13 @@
+```typescript
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DesignTab } from "@/components/DesignTab";
 import { MetadataTab } from "@/components/MetadataTab";
 import { TimingTab } from "@/components/TimingTab";
 import "./index.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "./store";
 import { WaveformDisplay } from "./components/WaveformDisplay";
-import type { Snap } from "./lib/timingPoints";
+import { findNextSnap, findPreviousSnap, type Snap } from "./lib/timingPoints";
 import { AudioController } from "./lib/audio";
 import { Button } from "./components/ui/button";
 import { Pause, Play } from "lucide-react";
@@ -104,24 +105,35 @@ export function App() {
     };
   }, []);
 
-  // Global keybinding for hold-space-to-play
+  // Global keybindings
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
-      if (!allowKeyEvent(e)) return;
+      if (e.code === "Space") {
+        if (!allowKeyEvent(e)) return;
 
-      // Prevent repeated plays when holding space
-      if (e.repeat) return;
+        // Prevent repeated plays when holding space
+        if (e.repeat) return;
 
-      e.preventDefault();
-      const controller = audioControllerRef.current;
-      // If there's no controller or audio is already playing, do nothing.
-      if (!controller || controller.getIsPlaying()) {
-        return;
+        e.preventDefault();
+        const controller = audioControllerRef.current;
+        // If there's no controller or audio is already playing, do nothing.
+        if (!controller || controller.getIsPlaying()) {
+          return;
+        }
+
+        spaceDownTimeRef.current = controller.getCurrentTime();
+        controller.play();
+      } else if (e.code === "KeyA") {
+        if (!allowKeyEvent(e)) return;
+        e.preventDefault();
+        const prevSnap = findPreviousSnap(map, getCurrentTime(), designSnap);
+        if (prevSnap !== null) handleSeek(prevSnap);
+      } else if (e.code === "Semicolon") {
+        if (!allowKeyEvent(e)) return;
+        e.preventDefault();
+        const nextSnap = findNextSnap(map, getCurrentTime(), designSnap);
+        if (nextSnap !== null) handleSeek(nextSnap);
       }
-
-      spaceDownTimeRef.current = controller.getCurrentTime();
-      controller.play();
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -157,7 +169,7 @@ export function App() {
         spaceDownTimeRef.current = null;
       }
     };
-  }, []);
+  }, [map, designSnap]);
 
   const getCurrentTime = () => audioControllerRef.current?.getCurrentTime() ?? 0;
 
@@ -211,6 +223,7 @@ export function App() {
             getCurrentTime={getCurrentTime}
             map={map}
             snap={designSnap}
+            seek={handleSeek}
           />
         </div>
         {song?.url ? (
@@ -256,3 +269,4 @@ export function App() {
 }
 
 export default App;
+```

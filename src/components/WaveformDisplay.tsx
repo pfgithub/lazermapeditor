@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+```typescript
+import { useCallback, useEffect, useRef, type WheelEvent } from "react";
 import type { Beatmap } from "@/store";
 import {
   calculateTimingPointsInRange,
+  findNextSnap,
+  findPreviousSnap,
   getColorForSnap,
   getSnapForTime,
   type Snap,
@@ -11,6 +14,7 @@ interface WaveformDisplayProps {
   audioBuffer: AudioBuffer | null;
   isSongLoading: boolean;
   getCurrentTime: () => number;
+  seek: (time: number) => void;
   map: Beatmap;
   snap: Snap;
 }
@@ -152,10 +156,10 @@ const drawWaveform = (
   }
 };
 
-export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, map, snap }: WaveformDisplayProps) {
+export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, map, snap, seek }: WaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [primaryColor, setPrimaryColor] = useState("hsl(217.2 91.2% 59.8% / 0.6)");
+  const primaryColor = "hsl(217.2 91.2% 59.8% / 0.6)";
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -177,14 +181,14 @@ export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, ma
     drawSnapMarkers(ctx, width, height, viewStartTime, map, snap);
     drawNotes(ctx, width, height, viewStartTime, map);
     drawPlayhead(ctx, width, height);
-  }, [audioBuffer, map, snap, getCurrentTime, primaryColor]);
+  }, [audioBuffer, map, snap, getCurrentTime]);
 
   useEffect(() => {
     let animationFrame: number;
     const next = () => {
       draw();
       animationFrame = requestAnimationFrame(next);
-    }
+    };
     next();
     return () => cancelAnimationFrame(animationFrame);
   }, [draw]);
@@ -221,8 +225,35 @@ export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, ma
     return () => resizeObserver.disconnect();
   }, [draw]);
 
+  const handleWheel = (e: WheelEvent) => {
+    if (!audioBuffer) return;
+    e.preventDefault();
+
+    const delta = e.deltaY || e.deltaX;
+    if (delta === 0) return;
+
+    let nextTime: number | null = null;
+
+    if (delta > 0) {
+      // Scroll down or right -> forward in time
+      nextTime = findNextSnap(map, getCurrentTime(), snap);
+    } else {
+      // delta < 0
+      // Scroll up or left -> backward in time
+      nextTime = findPreviousSnap(map, getCurrentTime(), snap);
+    }
+
+    if (nextTime !== null) {
+      seek(nextTime);
+    }
+  };
+
   return (
-    <div ref={containerRef} className="w-full h-full relative bg-[hsl(217.2,32.6%,17.5%)]/50 rounded-lg overflow-hidden border border-[hsl(217.2,32.6%,17.5%)]">
+    <div
+      ref={containerRef}
+      onWheel={handleWheel}
+      className="w-full h-full relative bg-[hsl(217.2,32.6%,17.5%)]/50 rounded-lg overflow-hidden border border-[hsl(217.2,32.6%,17.5%)]"
+    >
       <canvas ref={canvasRef} className="absolute top-0 left-0" />
       <div className="absolute inset-0 flex items-center justify-center text-[hsl(215,20.2%,65.1%)] text-sm p-4 text-center pointer-events-none">
         {isSongLoading ? (
@@ -234,3 +265,4 @@ export function WaveformDisplay({ audioBuffer, isSongLoading, getCurrentTime, ma
     </div>
   );
 }
+```
