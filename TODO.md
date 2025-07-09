@@ -15,8 +15,9 @@ TODO:
 - [ ] Effects when a note passes below the line. It needs to disappear and play an effect and play its hitsound
 - [ ] Before the first time you press space to play you have to click
 - [ ] Need to do the binary search optimizations to reduce the performance impact of having thousands of notes
-- [ ] consider trying out a keyboard-only workflow: place notes with `dfjk`. place over a note to erase. advance with `;`, de-vance with `a`. hold space to play. 
+- [x] consider trying out a keyboard-only workflow: place notes with `dfjk`. place over a note to erase. advance with `;`, de-vance with `a`. hold space to play. 
   - simple to try, add support for 'a' to go back and ';' to go forwards. also add pressing a note over a note deletes it, which we want anyway
+  - I don't like it
 - [ ] add keybind settings
 
 Export:
