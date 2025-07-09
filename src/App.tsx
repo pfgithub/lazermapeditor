@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DesignTab } from "@/components/DesignTab";
 import { MetadataTab } from "@/components/MetadataTab";
 import { TimingTab } from "@/components/TimingTab";
+import { SettingsTab } from "@/components/SettingsTab";
 import "./index.css";
 import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "./store";
@@ -19,7 +20,7 @@ function formatTime(seconds: number) {
 }
 
 export function App() {
-  const { map, song, setMap, setSongFile, loadFromDb, isInitialized } = useAppStore();
+  const { map, song, keybinds, setMap, setSongFile, loadFromDb, isInitialized } = useAppStore();
   const audioControllerRef = useRef<AudioController | null>(null);
   const spaceDownTimeRef = useRef<number | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
@@ -107,7 +108,7 @@ export function App() {
   // Global keybindings
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
+      if (e.code === keybinds.temporaryPlay) {
         if (!allowKeyEvent(e)) return;
 
         // Prevent repeated plays when holding space
@@ -122,12 +123,12 @@ export function App() {
 
         spaceDownTimeRef.current = controller.getCurrentTime();
         controller.play();
-      } else if (e.code === "KeyA") {
+      } else if (e.code === keybinds.seekBackward) {
         if (!allowKeyEvent(e)) return;
         e.preventDefault();
         const prevSnap = findPreviousSnap(map, getCurrentTime(), designSnap);
         if (prevSnap !== null) handleSeek(prevSnap);
-      } else if (e.code === "Semicolon") {
+      } else if (e.code === keybinds.seekForward) {
         if (!allowKeyEvent(e)) return;
         e.preventDefault();
         const nextSnap = findNextSnap(map, getCurrentTime(), designSnap);
@@ -136,7 +137,7 @@ export function App() {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
+      if (e.code !== keybinds.temporaryPlay) return;
       if (!allowKeyEvent(e)) return;
 
       // If we weren't in a "hold-to-play" state, do nothing.
@@ -168,7 +169,7 @@ export function App() {
         spaceDownTimeRef.current = null;
       }
     };
-  }, [map, designSnap]);
+  }, [map, designSnap, keybinds]);
 
   const getCurrentTime = () => audioControllerRef.current?.getCurrentTime() ?? 0;
 
@@ -195,6 +196,7 @@ export function App() {
           <TabsTrigger value="metadata">Metadata</TabsTrigger>
           <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="timing">Timing</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="metadata" className="flex-grow min-h-0 m-0">
           <MetadataTab map={map} setMap={setMap} song={song} setSong={setSongFile} />
@@ -211,6 +213,9 @@ export function App() {
         </TabsContent>
         <TabsContent value="timing" className="flex-grow min-h-0 m-0">
           <TimingTab map={map} setMap={setMap} getCurrentTime={getCurrentTime} songUrl={song?.url ?? null} />
+        </TabsContent>
+        <TabsContent value="settings" className="flex-grow min-h-0 m-0">
+          <SettingsTab />
         </TabsContent>
       </Tabs>
 

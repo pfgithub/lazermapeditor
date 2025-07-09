@@ -1,4 +1,4 @@
-import type { Note, Beatmap } from "@/store";
+import type { Note, Beatmap, Keybinds } from "@/store";
 import {
   calculateTimingPointsInRange,
   findNearestSnap,
@@ -36,20 +36,10 @@ export interface DesignCanvasControllerOptions {
   map: Beatmap;
   getCurrentTime: () => number;
   snap: Snap;
+  keybinds: Keybinds;
   setMap: (map: Beatmap) => void;
   onSelectionChange?: (count: number) => void;
 }
-const keyMap: { [key: string]: 0 | 1 | 2 | 3 } = {
-  // for two-handed df/jk
-  d: 0,
-  f: 1,
-  j: 2,
-  k: 3,
-
-  // for one-hand dfgh
-  g: 2,
-  h: 3,
-};
 
 const themeColors = {
   border: "hsl(217.2 32.6% 17.5%)",
@@ -63,6 +53,8 @@ export class DesignCanvasController {
   private map: Beatmap;
   private getCurrentTime: () => number;
   private snap: Snap;
+  private keybinds: Keybinds;
+  private keyMap: { [code: string]: 0 | 1 | 2 | 3 };
 
   private setMap: (map: Beatmap) => void;
   private onSelectionChange: (count: number) => void;
@@ -84,6 +76,8 @@ export class DesignCanvasController {
     this.map = options.map;
     this.getCurrentTime = options.getCurrentTime;
     this.snap = options.snap;
+    this.keybinds = options.keybinds;
+    this.keyMap = this.generateKeyMap(options.keybinds);
 
     this.setMap = options.setMap;
     this.onSelectionChange = options.onSelectionChange ?? (() => {});
@@ -97,7 +91,21 @@ export class DesignCanvasController {
       >
     >,
   ) {
-    Object.assign(this, options);
+    if (options.keybinds && options.keybinds !== this.keybinds) {
+      this.keybinds = options.keybinds;
+      this.keyMap = this.generateKeyMap(options.keybinds);
+    }
+    if (options.map) this.map = options.map;
+    if (options.snap) this.snap = options.snap;
+  }
+
+  private generateKeyMap(keybinds: Keybinds): { [code: string]: 0 | 1 | 2 | 3 } {
+    return {
+      [keybinds.placeNoteLane1]: 0,
+      [keybinds.placeNoteLane2]: 1,
+      [keybinds.placeNoteLane3]: 2,
+      [keybinds.placeNoteLane4]: 3,
+    };
   }
 
   public posToY(lineTime: number): number {
@@ -453,19 +461,19 @@ export class DesignCanvasController {
 
     // --- Copy, Paste, Delete ---
     if (e.ctrlKey || e.metaKey) {
-      if (e.key.toLowerCase() === "c") {
+      if (e.code === "KeyC") {
         e.preventDefault();
         this.handleCopy();
         return;
       }
-      if (e.key.toLowerCase() === "v") {
+      if (e.code === "KeyV") {
         e.preventDefault();
         this.handlePaste();
         return;
       }
     }
 
-    if (e.key === "Backspace" || e.key === "Delete") {
+    if (e.code === this.keybinds.deleteSelection || e.code === "Backspace") {
       if (this.selectedKeyIds.size > 0) {
         e.preventDefault();
         this.handleDelete();
@@ -474,7 +482,7 @@ export class DesignCanvasController {
     }
 
     // --- Place Note ---
-    const keyIndex = keyMap[e.key.toLowerCase()];
+    const keyIndex = this.keyMap[e.code];
     if (keyIndex === undefined || e.repeat) return;
 
     if (this.activeHolds.get(keyIndex) != null) return;
@@ -487,7 +495,7 @@ export class DesignCanvasController {
   }
 
   public handleKeyUp(e: KeyboardEvent) {
-    const keyIndex = keyMap[e.key.toLowerCase()];
+    const keyIndex = this.keyMap[e.code];
     if (keyIndex === undefined) return;
 
     const startTime = this.activeHolds.get(keyIndex);

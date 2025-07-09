@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { Note, Beatmap } from "@/store";
+import { useAppStore, type Note, type Beatmap } from "@/store";
 import { findNextSnap, findPreviousSnap, snapLevels, type Snap } from "@/lib/timingPoints";
 import { DesignCanvasController } from "@/lib/DesignCanvasController";
 
@@ -19,6 +19,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<DesignCanvasController | null>(null);
   const [selectionCount, setSelectionCount] = useState(0);
+  const keybinds = useAppStore((s) => s.keybinds);
 
   // Initialize and update canvas controller
   useEffect(() => {
@@ -31,6 +32,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
         map,
         getCurrentTime,
         snap,
+        keybinds,
         // Callbacks to update component state
         setMap,
         onSelectionChange: setSelectionCount,
@@ -39,6 +41,7 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
       controllerRef.current.update({
         map,
         snap,
+        keybinds,
       });
     }
   }); // Runs on every render to keep controller props in sync

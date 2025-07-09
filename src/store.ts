@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getMap, saveMap, getSongFile, saveSongFile, clearSongFile } from "./db";
+import { getMap, saveMap, getSongFile, saveSongFile, clearSongFile, getSettings, saveSettings } from "./db";
 
 // Types
 export type TimingSegment = {
@@ -28,12 +28,26 @@ export type Song = {
   name: string;
 };
 
+export type KeybindAction =
+  | "temporaryPlay"
+  | "seekBackward"
+  | "seekForward"
+  | "deleteSelection"
+  | "placeNoteLane1"
+  | "placeNoteLane2"
+  | "placeNoteLane3"
+  | "placeNoteLane4";
+
+export type Keybinds = Record<KeybindAction, string>; // Maps action to KeyboardEvent['code']
+
 interface AppState {
   map: Beatmap;
   song: Song | null;
   isInitialized: boolean;
+  keybinds: Keybinds;
   setMap: (map: Beatmap) => void;
   setSongFile: (songFile: File | null) => void;
+  setKeybind: (action: KeybindAction, key: string) => void;
   loadFromDb: () => Promise<void>;
 }
 
@@ -46,14 +60,32 @@ const defaultMap: Beatmap = {
   notes: [],
 };
 
+const defaultKeybinds: Keybinds = {
+  temporaryPlay: "Space",
+  seekBackward: "KeyA",
+  seekForward: "Semicolon",
+  deleteSelection: "Delete",
+  placeNoteLane1: "KeyD",
+  placeNoteLane2: "KeyF",
+  placeNoteLane3: "KeyJ",
+  placeNoteLane4: "KeyK",
+};
+
 export const useAppStore = create<AppState>((set, get) => ({
   map: defaultMap,
   song: null,
   isInitialized: false,
+  keybinds: defaultKeybinds,
 
   setMap: (newMap) => {
     set({ map: newMap });
     saveMap(newMap).catch((err) => console.error("Failed to save map", err));
+  },
+
+  setKeybind: (action, key) => {
+    const newKeybinds = { ...get().keybinds, [action]: key };
+    set({ keybinds: newKeybinds });
+    saveSettings(newKeybinds).catch((err) => console.error("Failed to save keybinds", err));
   },
 
   setSongFile: (songFile) => {
@@ -80,7 +112,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadFromDb: async () => {
     if (get().isInitialized) return;
     try {
-      const [mapData, songFile] = await Promise.all([getMap<Beatmap>(), getSongFile()]);
+      const [mapData, songFile, keybindsData] = await Promise.all([
+        getMap<Beatmap>(),
+        getSongFile(),
+        getSettings<Keybinds>(),
+      ]);
+
       if (mapData) {
         // Ensure all fields are present from older saved versions
         set({ map: { ...defaultMap, ...mapData } });
@@ -88,6 +125,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (songFile) {
         // Use setSongFile to avoid duplicating logic and handle URL creation
         get().setSongFile(songFile);
+      }
+      if (keybindsData) {
+        set({ keybinds: { ...defaultKeybinds, ...keybindsData } });
       }
     } catch (error) {
       console.error("Failed to load data from IndexedDB", error);
