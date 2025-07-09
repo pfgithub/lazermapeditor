@@ -1,3 +1,4 @@
+```typescript
 import { create } from "zustand";
 import { getMap, saveMap, getSongFile, saveSongFile, clearSongFile } from "./db";
 
@@ -15,6 +16,10 @@ export type Note = {
 };
 
 export type Beatmap = {
+  title: string;
+  artist: string;
+  creator: string;
+  version: string;
   timing: TimingSegment[]; // sorted by start time
   notes: Note[]; // sorted by time
 };
@@ -33,8 +38,17 @@ interface AppState {
   loadFromDb: () => Promise<void>;
 }
 
+const defaultMap: Beatmap = {
+  title: "Untitled",
+  artist: "Unknown Artist",
+  creator: "New Mapper",
+  version: "Normal",
+  timing: [],
+  notes: [],
+};
+
 export const useAppStore = create<AppState>((set, get) => ({
-  map: { timing: [], notes: [] },
+  map: defaultMap,
   song: null,
   isInitialized: false,
 
@@ -69,7 +83,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const [mapData, songFile] = await Promise.all([getMap<Beatmap>(), getSongFile()]);
       if (mapData) {
-        set({ map: mapData });
+        // Ensure all fields are present from older saved versions
+        set({ map: { ...defaultMap, ...mapData } });
       }
       if (songFile) {
         // Use setSongFile to avoid duplicating logic and handle URL creation
@@ -82,3 +97,4 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 }));
+```

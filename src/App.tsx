@@ -1,3 +1,4 @@
+```typescript
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DesignTab } from "@/components/DesignTab";
 import { MetadataTab } from "@/components/MetadataTab";
@@ -186,7 +187,7 @@ export function App() {
           <TabsTrigger value="timing">Timing</TabsTrigger>
         </TabsList>
         <TabsContent value="metadata" className="flex-grow min-h-0 m-0">
-          <MetadataTab song={song} setSong={setSongFile} />
+          <MetadataTab map={map} setMap={setMap} song={song} setSong={setSongFile} />
         </TabsContent>
         <TabsContent value="design" className="flex-grow min-h-0 m-0">
           <DesignTab
@@ -256,3 +257,4 @@ export function App() {
 }
 
 export default App;
+```
