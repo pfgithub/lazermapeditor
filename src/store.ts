@@ -11,8 +11,12 @@ export type TimingSegment = {
 export type SvSegment = {
   startTime: number;
   endTime: number;
-  dur: number;
-  sv: number;
+  pattern: string,
+};
+
+export type SvPattern = {
+  from: number,
+  to: number,
 };
 
 export type Note = {
@@ -29,6 +33,7 @@ export type Beatmap = {
   timing: TimingSegment[]; // sorted by start time
   notes: Note[]; // sorted by time
   svs: SvSegment[]; // sorted by start time
+  svPatterns: Record<string, SvPattern>;
 };
 
 export type Song = {
@@ -68,6 +73,7 @@ const defaultMap: Beatmap = {
   timing: [],
   notes: [],
   svs: [],
+  svPatterns: {},
 };
 
 const defaultKeybinds: Keybinds = {

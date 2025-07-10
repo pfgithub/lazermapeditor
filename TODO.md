@@ -21,6 +21,8 @@ TODO:
 - [x] add keybind settings
 - [ ] Enable setting two keys for each keybind. Default 'Delete Selection' to both 'Delete' and 'Backspace'. Default 'Place Note 3' to 'KeyJ and KeyG' and Place Note 4 to KeyK and KeyH
   - ran it once but it generated a diff
+- [ ] allow creating sv patterns and bulk assigning patterns to svs
+- [ ] add an errors thing that shows overlapping notes, svs with notes in them, ...
 
 Export:
 

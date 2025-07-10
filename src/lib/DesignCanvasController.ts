@@ -516,8 +516,7 @@ export class DesignCanvasController {
       const newSv: SvSegment = {
         startTime: Math.min(startTime, endTime),
         endTime: Math.max(startTime, endTime),
-        dur: 0.5,
-        sv: 0.5,
+        pattern: "0",
       };
       const existingSv = this.map.svs.find(
         (k) => k.startTime === newSv.startTime,
@@ -651,18 +650,24 @@ export class DesignCanvasController {
     }
 
     // --- Draw SVs ---
-    for (const key of this.map.svs) {
-      if (key.endTime < viewStartTime || key.startTime > viewEndTime) continue;
+    for (const sv of this.map.svs) {
+      if (sv.endTime < viewStartTime || sv.startTime > viewEndTime) continue;
 
-      const y_start = this.posToY(key.startTime);
-      const y_mid = this.posToY(key.startTime + (key.endTime - key.startTime) * key.dur);
-      const y_end = this.posToY(key.endTime);
+      const pattern = this.map.svPatterns[sv.pattern ?? ""] ?? {from: 0.9, to: 0.1};
+
+      const y_start = this.posToY(sv.startTime);
+      const y_mid = this.posToY(sv.startTime + (sv.endTime - sv.startTime) * pattern.from);
+      const y_end = this.posToY(sv.endTime);
+
+      const c = 7;
+      const c_before = c * pattern.to;
+      const c_after = c * (1 - pattern.to);
 
       // Hold Note
       ctx.fillStyle = "#AAA";
-      ctx.fillRect(0, y_end, 3, y_mid - y_end);
+      ctx.fillRect(0, y_end, c_before, y_mid - y_end);
       ctx.fillStyle = "#FFF";
-      ctx.fillRect(0, y_mid, 5, y_start - y_mid);
+      ctx.fillRect(0, y_mid, c_after, y_start - y_mid);
     }
 
     // --- Draw Dragged Keys Preview ---

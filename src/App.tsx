@@ -4,14 +4,14 @@ import { MetadataTab } from "@/components/MetadataTab";
 import { TimingTab } from "@/components/TimingTab";
 import { SettingsTab } from "@/components/SettingsTab";
 import "./index.css";
-import { useEffect, useRef, useState } from "react";
-import { useAppStore, type SvSegment } from "./store";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { type Beatmap, useAppStore } from "./store";
 import { WaveformDisplay } from "./components/WaveformDisplay";
 import { findNextSnap, findPreviousSnap, type Snap } from "./lib/timingPoints";
 import { AudioController } from "./lib/audio";
 import { Button } from "./components/ui/button";
 import { Pause, Play } from "lucide-react";
-import { allowKeyEvent } from "./lib/utils";
+import { allowKeyEvent, svRemap } from "./lib/utils";
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -33,6 +33,11 @@ export function App() {
   const [designSnap, setDesignSnap] = useState<Snap>(4);
   // precise time must not be stored in state to prevent excessive rerenders
   const [currentTimeRounded, setCurrentTimeRounded] = useState(0);
+
+  const mapRef = useRef<Beatmap>(map);
+  useEffect(() => {
+    mapRef.current = map;
+  }, [map]);
 
   useEffect(() => {
     loadFromDb();
@@ -173,7 +178,21 @@ export function App() {
     };
   }, [map, designSnap, keybinds, activeTab]);
 
-  const getCurrentTime = () => audioControllerRef.current?.getCurrentTime() ?? 0;
+  const getCurrentTime = useCallback(() => {
+    const map = mapRef.current;
+    let current = audioControllerRef.current?.getCurrentTime() ?? 0
+    for(const sv of map.svs) {
+      if(current >= sv.startTime && current < sv.endTime) {
+        // modify
+        const pattern = map.svPatterns[sv.pattern ?? ""] ?? {from: 0.9, to: 0.1};
+        const before = (current - sv.startTime) / (sv.endTime - sv.startTime);
+        const after = svRemap(before, pattern.from, pattern.to);
+        current = after * (sv.endTime - sv.startTime) + sv.startTime;
+        break;
+      }
+    }
+    return current;
+  }, []);
 
   const handleSeek = (time: number) => {
     audioControllerRef.current?.seek(time);

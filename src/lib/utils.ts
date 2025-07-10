@@ -17,3 +17,8 @@ export function allowKeyEvent(e: KeyboardEvent): boolean {
   }
   return true;
 }
+
+export function svRemap(t: number, from: number, to: number): number {
+  if(t < from) return t / from * to;
+  return (t - from) / (1 - from) * (1 - to) + to;
+}
