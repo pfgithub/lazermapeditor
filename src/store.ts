@@ -15,6 +15,7 @@ export type SvSegment = {
 };
 
 export type SvPattern = {
+  name: string;
   from: number,
   to: number,
 };
@@ -143,6 +144,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       ]);
 
       if (mapData) {
+        // Migration for svPatterns from older versions that don't have a name
+        if (mapData.svPatterns) {
+          Object.values(mapData.svPatterns).forEach((pattern, index) => {
+            if (typeof (pattern as any).name !== "string") {
+              (pattern as any).name = `Pattern ${index + 1}`;
+            }
+          });
+        }
         // Ensure all fields are present from older saved versions
         set({ map: { ...defaultMap, ...mapData } });
       }

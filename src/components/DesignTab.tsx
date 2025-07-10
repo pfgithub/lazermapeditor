@@ -32,7 +32,8 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
 
   const handleCreatePattern = useCallback(() => {
     const newId = crypto.randomUUID();
-    const newPattern: SvPattern = { from: 1.0, to: 1.0 };
+    const patternCount = Object.keys(map.svPatterns).length;
+    const newPattern: SvPattern = { name: `Pattern ${patternCount + 1}`, from: 1.0, to: 1.0 };
     setMap({
       ...map,
       svPatterns: {
@@ -46,10 +47,50 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
   const handleUpdatePattern = useCallback(
     (id: string, from: number, to: number) => {
       const newPatterns = { ...map.svPatterns };
-      newPatterns[id] = { from: isNaN(from) ? 0 : from, to: isNaN(to) ? 0 : to };
+      const oldPattern = newPatterns[id];
+      if (!oldPattern) return;
+      newPatterns[id] = { ...oldPattern, from: isNaN(from) ? 0 : from, to: isNaN(to) ? 0 : to };
       setMap({ ...map, svPatterns: newPatterns });
     },
     [map, setMap],
+  );
+
+  const handleRenamePattern = useCallback(
+    (id: string, newName: string) => {
+      const patternToUpdate = map.svPatterns[id];
+      if (!patternToUpdate) return;
+
+      const newPatterns = { ...map.svPatterns };
+      newPatterns[id] = { ...patternToUpdate, name: newName };
+      setMap({ ...map, svPatterns: newPatterns });
+    },
+    [map, setMap],
+  );
+
+  const handleDeletePattern = useCallback(
+    (id: string) => {
+      if (!map.svPatterns[id]) return;
+
+      const newPatterns = { ...map.svPatterns };
+      delete newPatterns[id];
+
+      // Also need to remove this pattern from any notes that use it.
+      const newNotes = map.notes.map((note) => {
+        if (note.svPattern === id) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { svPattern, ...rest } = note;
+          return rest;
+        }
+        return note;
+      });
+
+      setMap({ ...map, svPatterns: newPatterns, notes: newNotes });
+
+      if (selectedPatternId === id) {
+        setSelectedPatternId(null);
+      }
+    },
+    [map, setMap, selectedPatternId],
   );
 
   const handleAssignPattern = useCallback(() => {
@@ -253,7 +294,7 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
 
               <div className="flex-grow space-y-1 overflow-y-auto pr-2 -mr-2">
                 {Object.keys(map.svPatterns).length > 0 ? (
-                  Object.keys(map.svPatterns).map((patternId) => (
+                  Object.entries(map.svPatterns).map(([patternId, pattern]) => (
                     <Button
                       key={patternId}
                       variant={selectedPatternId === patternId ? "secondary" : "ghost"}
@@ -261,7 +302,7 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
                       className="w-full h-auto min-h-8 justify-start text-left"
                       size="sm"
                     >
-                      <span className="font-mono text-xs break-all">{patternId}</span>
+                      <span className="truncate">{pattern.name}</span>
                     </Button>
                   ))
                 ) : (
@@ -271,6 +312,17 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
 
               {selectedPatternId && map.svPatterns[selectedPatternId] && (
                 <div className="shrink-0 space-y-4 border-t border-[hsl(217.2,32.6%,17.5%)] pt-4">
+                  <div>
+                    <Label htmlFor="pattern-name" className="text-xs">
+                      Pattern Name
+                    </Label>
+                    <Input
+                      id="pattern-name"
+                      value={map.svPatterns[selectedPatternId]!.name}
+                      onChange={(e) => handleRenamePattern(selectedPatternId, e.target.value)}
+                      className="h-8 mt-1"
+                    />
+                  </div>
                   <div className="max-w-24">
                     <SvEditor
                       from={map.svPatterns[selectedPatternId]!.from}
@@ -280,6 +332,9 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
                   </div>
                   <Button onClick={handleAssignPattern} className="w-full">
                     Assign to Selection
+                  </Button>
+                  <Button onClick={() => handleDeletePattern(selectedPatternId)} variant="destructive" className="w-full">
+                    Delete Pattern
                   </Button>
                 </div>
               )}
