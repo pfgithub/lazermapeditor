@@ -27,13 +27,13 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
   const clearListenersRef = useRef<(() => void) | undefined>(undefined);
 
   const selectedSvNotes = useMemo(() => {
-    return Array.from(selectedElements).filter((el) => el.key === "sv");
-  }, [selectedElements]);
+    return Array.from(selectedElements).filter((el) => el.key === "sv" && el.svPattern !== selectedPatternId);
+  }, [selectedElements, selectedPatternId]);
 
   const handleCreatePattern = useCallback(() => {
     const newId = crypto.randomUUID();
     const patternCount = Object.keys(map.svPatterns).length;
-    const newPattern: SvPattern = { name: `Pattern ${patternCount + 1}`, from: 1.0, to: 1.0 };
+    const newPattern: SvPattern = { name: `Pattern ${patternCount + 1}`, from: 0.7, to: 0.3 };
     setMap({
       ...map,
       svPatterns: {
