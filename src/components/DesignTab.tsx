@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useAppStore, type MapElement, type Beatmap } from "@/store";
+import { useAppStore, type MapElement, type Beatmap, type SvPattern } from "@/store";
 import { findNextSnap, findPreviousSnap, snapLevels, type Snap } from "@/lib/timingPoints";
 import { DesignCanvasController } from "@/lib/DesignCanvasController";
+import { Input } from "./ui/input";
 
 interface DesignTabProps {
   map: Beatmap;
@@ -20,8 +21,55 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<DesignCanvasController | null>(null);
   const [selectedElements, setSelectedElements] = useState<Set<MapElement>>(new Set());
+  const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
   const keybinds = useAppStore((s) => s.keybinds);
   const clearListenersRef = useRef<(() => void) | undefined>(undefined);
+
+  const selectedSvNotes = useMemo(() => {
+    return Array.from(selectedElements).filter((el) => el.key === "sv");
+  }, [selectedElements]);
+
+  useEffect(() => {
+    if (selectedSvNotes.length > 0) {
+      const firstPatternId = selectedSvNotes[0]?.svPattern;
+      const allSame = selectedSvNotes.every((note) => note.svPattern === firstPatternId);
+
+      if (allSame && firstPatternId && map.svPatterns[firstPatternId]) {
+        setSelectedPatternId(firstPatternId);
+      } else {
+        setSelectedPatternId(null);
+      }
+    } else {
+      setSelectedPatternId(null);
+    }
+  }, [selectedSvNotes, map.svPatterns]);
+
+  const handleCreatePattern = useCallback(() => {
+    const newId = crypto.randomUUID();
+    const newPattern: SvPattern = { from: 1.0, to: 1.0 };
+    setMap({
+      ...map,
+      svPatterns: {
+        ...map.svPatterns,
+        [newId]: newPattern,
+      },
+    });
+    setSelectedPatternId(newId);
+  }, [map, setMap]);
+
+  const handleUpdatePattern = useCallback(
+    (id: string, from: number, to: number) => {
+      const newPatterns = { ...map.svPatterns };
+      newPatterns[id] = { from: isNaN(from) ? 0 : from, to: isNaN(to) ? 0 : to };
+      setMap({ ...map, svPatterns: newPatterns });
+    },
+    [map, setMap],
+  );
+
+  const handleAssignPattern = useCallback(() => {
+    if (!selectedPatternId || !controllerRef.current) return;
+    controllerRef.current.assignSvPattern(selectedPatternId);
+  }, [selectedPatternId]);
 
   // Initialize and update canvas controller
   useEffect(() => {
@@ -37,7 +85,7 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
         keybinds,
         // Callbacks to update component state
         setMap,
-        onSelectionChange: els => setSelectedElements(new Set(els)),
+        onSelectionChange: (els) => setSelectedElements(new Set(els)),
       });
     } else {
       controllerRef.current.update({
@@ -152,7 +200,7 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
     clearListenersRef.current = () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
-    }
+    };
   }, []);
 
   return (
@@ -189,8 +237,83 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
           <canvas ref={canvasRef} className="absolute" onMouseDown={handleMouseDown} />
         </div>
 
-        <aside className="w-0 flex-grow bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg">
-          {/* Right panel, blank for now */}
+        <aside className="w-0 flex-grow bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg p-4 flex flex-col gap-4">
+          {selectedSvNotes.length > 0 ? (
+            <>
+              <div className="shrink-0 text-center">
+                <h3 className="font-semibold">SV Pattern Editor</h3>
+                <p className="text-xs text-[hsl(215,20.2%,65.1%)]">
+                  {selectedSvNotes.length} SV note{selectedSvNotes.length > 1 && "s"} selected
+                </p>
+              </div>
+
+              <Button onClick={handleCreatePattern} size="sm">
+                Create New Pattern
+              </Button>
+
+              <div className="flex-grow space-y-1 overflow-y-auto pr-2 -mr-2">
+                {Object.keys(map.svPatterns).length > 0 ? (
+                  Object.keys(map.svPatterns).map((patternId) => (
+                    <Button
+                      key={patternId}
+                      variant={selectedPatternId === patternId ? "secondary" : "ghost"}
+                      onClick={() => setSelectedPatternId(patternId)}
+                      className="w-full h-auto min-h-8 justify-start text-left"
+                      size="sm"
+                    >
+                      <span className="font-mono text-xs break-all">{patternId}</span>
+                    </Button>
+                  ))
+                ) : (
+                  <p className="text-center text-xs text-[hsl(215,20.2%,65.1%)] py-4">No patterns created yet.</p>
+                )}
+              </div>
+
+              {selectedPatternId && map.svPatterns[selectedPatternId] && (
+                <div className="shrink-0 space-y-4 border-t border-[hsl(217.2,32.6%,17.5%)] pt-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="from">From</Label>
+                    <Input
+                      id="from"
+                      type="number"
+                      value={map.svPatterns[selectedPatternId]!.from}
+                      onChange={(e) =>
+                        handleUpdatePattern(
+                          selectedPatternId,
+                          parseFloat(e.target.value),
+                          map.svPatterns[selectedPatternId]!.to,
+                        )
+                      }
+                      step="0.1"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="to">To</Label>
+                    <Input
+                      id="to"
+                      type="number"
+                      value={map.svPatterns[selectedPatternId]!.to}
+                      onChange={(e) =>
+                        handleUpdatePattern(
+                          selectedPatternId,
+                          map.svPatterns[selectedPatternId]!.from,
+                          parseFloat(e.target.value),
+                        )
+                      }
+                      step="0.1"
+                    />
+                  </div>
+                  <Button onClick={handleAssignPattern} className="w-full">
+                    Assign to Selection
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center text-sm text-[hsl(215,20.2%,65.1%)] m-auto">
+              Select one or more SV notes to configure patterns.
+            </div>
+          )}
         </aside>
       </div>
     </div>

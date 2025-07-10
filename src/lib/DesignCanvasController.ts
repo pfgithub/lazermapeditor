@@ -448,6 +448,32 @@ export class DesignCanvasController {
     this.onSelectionChange(this.selectedElements);
   }
 
+  public assignSvPattern(patternId: string) {
+    if (this.selectedElements.size === 0) return;
+
+    const newModifiedNotes: MapElement[] = [];
+    const selectedNotes = this.selectedElements;
+
+    let changed = false;
+    for (const note of selectedNotes) {
+      if (note.key === "sv") {
+        newModifiedNotes.push({ ...note, svPattern: patternId });
+        changed = true;
+      } else {
+        newModifiedNotes.push(note);
+      }
+    }
+
+    if (!changed) return;
+
+    const unselectedNotes = this.map.notes.filter((note) => !selectedNotes.has(note));
+    const allNotes = [...unselectedNotes, ...newModifiedNotes].sort((a, b) => a.startTime - b.startTime);
+
+    this.setMap({ ...this.map, notes: allNotes });
+    this.selectedElements = new Set(newModifiedNotes);
+    this.onSelectionChange(this.selectedElements);
+  }
+
   public handleKeyDown(e: KeyboardEvent) {
     if (!allowKeyEvent(e)) return;
 
