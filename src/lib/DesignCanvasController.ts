@@ -597,8 +597,8 @@ export class DesignCanvasController {
       const y_end = this.posToY(sv.endTime);
 
       const c = 7;
-      const c_before = c * pattern.to;
-      const c_after = c * (1 - pattern.to);
+      const c_before = Math.max(1, c * (1 - pattern.from));
+      const c_after = Math.max(1, c * pattern.from);
 
       // Hold Note
       ctx.fillStyle = "#AAA";
