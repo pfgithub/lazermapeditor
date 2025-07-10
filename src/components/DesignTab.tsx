@@ -4,7 +4,8 @@ import { Label } from "@/components/ui/label";
 import { useAppStore, type MapElement, type Beatmap, type SvPattern } from "@/store";
 import { findNextSnap, findPreviousSnap, snapLevels, type Snap } from "@/lib/timingPoints";
 import { DesignCanvasController } from "@/lib/DesignCanvasController";
-import { Input } from "./ui/input";
+import { Input } from "@/components/ui/input";
+import { SvEditor } from "@/components/SvEditor";
 
 interface DesignTabProps {
   map: Beatmap;
@@ -271,6 +272,11 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
 
               {selectedPatternId && map.svPatterns[selectedPatternId] && (
                 <div className="shrink-0 space-y-4 border-t border-[hsl(217.2,32.6%,17.5%)] pt-4">
+                  <SvEditor
+                    from={map.svPatterns[selectedPatternId]!.from}
+                    to={map.svPatterns[selectedPatternId]!.to}
+                    onChange={(from, to) => handleUpdatePattern(selectedPatternId, from, to)}
+                  />
                   <div className="grid gap-2">
                     <Label htmlFor="from">From</Label>
                     <Input
@@ -284,7 +290,9 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
                           map.svPatterns[selectedPatternId]!.to,
                         )
                       }
-                      step="0.1"
+                      step="0.01"
+                      min="0"
+                      max="1"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -300,7 +308,9 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
                           parseFloat(e.target.value),
                         )
                       }
-                      step="0.1"
+                      step="0.01"
+                      min="0"
+                      max="1"
                     />
                   </div>
                   <Button onClick={handleAssignPattern} className="w-full">
