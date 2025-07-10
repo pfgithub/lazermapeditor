@@ -2,6 +2,7 @@ import type { MapElement, Beatmap, Keybinds, KeybindAction, SvSegment, MapElemen
 import {
   calculateTimingPointsInRange,
   findNearestSnap,
+  findNextSnap,
   getColorForSnap,
   getSnapForTime,
   type Snap,
@@ -144,7 +145,17 @@ export class DesignCanvasController {
     const selectedKeys: MapElement[] = [];
 
     for (const key of this.map.notes) {
-      if (key.key === "sv") continue;
+      if (key.key === "sv") {
+        const keyLeft = 0;
+        const keyRight = 7;
+        if (keyLeft > boxRight || keyRight < boxLeft) continue;
+        const y_start = this.posToY(key.startTime);
+        const y_end = this.posToY(key.endTime);
+        if (y_end < boxBottom && y_start > boxTop) {
+          selectedKeys.push(key);
+        }
+        continue;
+      }
       const keyLeft = key.key * laneWidth;
       const keyRight = (key.key + 1) * laneWidth;
       if (keyLeft > boxRight || keyRight < boxLeft) continue;
@@ -503,6 +514,11 @@ export class DesignCanvasController {
       this.setMap({ ...this.map, notes: newKeys });
     } else {
       // Note does not exist, add it.
+      if (newKey.key === "sv" && newKey.startTime === newKey.endTime) {
+        const newEndTime = findNextSnap(this.map, newKey.endTime, this.snap);
+        if (newEndTime == null) return;
+        newKey.endTime = newEndTime;
+      }
       const newKeys = [...this.map.notes, newKey].sort((a, b) => a.startTime - b.startTime);
       this.setMap({ ...this.map, notes: newKeys });
     }
@@ -563,6 +579,12 @@ export class DesignCanvasController {
       ctx.fillRect(0, y_end, c_before, y_mid - y_end);
       ctx.fillStyle = "#FFF";
       ctx.fillRect(0, y_mid, c_after, y_start - y_mid);
+      
+      if (isSelected) {
+        ctx.strokeStyle = themeColors.ring;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, y_end, c, y_start - y_end);
+      }
     };
 
     const drawKey = (key: MapElement, isSelected: boolean) => {
