@@ -1,7 +1,6 @@
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { type KeybindAction, useAppStore } from "@/store";
-import { useState, useEffect, useRef } from "react";
+import { KeybindButton } from "./KeybindButton";
 
 const keybindLabels: Record<KeybindAction, string> = {
   temporaryPlay: "Temporary Play",
@@ -17,43 +16,11 @@ const keybindLabels: Record<KeybindAction, string> = {
 function KeybindInput({ action }: { action: KeybindAction }) {
   const keybinds = useAppStore((s) => s.keybinds);
   const setKeybind = useAppStore((s) => s.setKeybind);
-  const [bindingIndex, setBindingIndex] = useState<number | null>(null);
-  const buttonRefs = [useRef<HTMLButtonElement>(null), useRef<HTMLButtonElement>(null)];
 
-  useEffect(() => {
-    if (bindingIndex === null) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Don't allow binding modifier keys alone
-      if (["Control", "Shift", "Alt", "Meta"].includes(e.key)) {
-        return;
-      }
-
-      setKeybind(action, e.code, bindingIndex);
-      setBindingIndex(null);
-    };
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        bindingIndex !== null &&
-        buttonRefs[bindingIndex]?.current &&
-        !buttonRefs[bindingIndex]!.current!.contains(e.target as Node)
-      ) {
-        setBindingIndex(null);
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown, true);
-    document.addEventListener("mousedown", handleClickOutside, true);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown, true);
-      document.removeEventListener("mousedown", handleClickOutside, true);
-    };
-  }, [action, setKeybind, bindingIndex]);
+  const handleKeybindChange = (key: string | undefined, index: number) => {
+    // The store uses "" for an unbound key. The new component uses `undefined` to signal a clear.
+    setKeybind(action, key || "", index);
+  };
 
   const currentKeys = keybinds[action] || [];
 
@@ -62,15 +29,11 @@ function KeybindInput({ action }: { action: KeybindAction }) {
       <Label className="text-right">{keybindLabels[action]}</Label>
       <div className="col-span-2 flex gap-2">
         {[0, 1].map((index) => (
-          <Button
+          <KeybindButton
             key={index}
-            ref={buttonRefs[index]}
-            variant="outline"
-            onClick={() => setBindingIndex(index)}
-            className="flex-1 justify-start font-mono"
-          >
-            {bindingIndex === index ? "Press a key..." : currentKeys[index] || "Unbound"}
-          </Button>
+            value={currentKeys[index]}
+            onValueChange={(key) => handleKeybindChange(key, index)}
+          />
         ))}
       </div>
     </div>
