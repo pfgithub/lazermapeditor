@@ -178,9 +178,12 @@ export function App() {
     };
   }, [map, designSnap, keybinds, activeTab]);
 
+  const getTrueCurrentTime = useCallback(() => {
+    return audioControllerRef.current?.getCurrentTime() ?? 0
+  }, []);
   const getCurrentTime = useCallback(() => {
     const map = mapRef.current;
-    let current = audioControllerRef.current?.getCurrentTime() ?? 0
+    let current = getTrueCurrentTime();
     for(const sv of map.notes) {
       if(sv.key !== "sv") continue;
       if(current >= sv.startTime && current < sv.endTime) {
@@ -193,7 +196,7 @@ export function App() {
       }
     }
     return current;
-  }, []);
+  }, [getTrueCurrentTime]);
 
   const handleSeek = (time: number) => {
     audioControllerRef.current?.seek(time);
@@ -227,6 +230,7 @@ export function App() {
           <DesignTab
             map={map}
             setMap={setMap}
+            getTrueCurrentTime={getTrueCurrentTime}
             getCurrentTime={getCurrentTime}
             seek={handleSeek}
             snap={designSnap}

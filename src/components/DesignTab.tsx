@@ -8,13 +8,14 @@ import { DesignCanvasController } from "@/lib/DesignCanvasController";
 interface DesignTabProps {
   map: Beatmap;
   setMap: (map: Beatmap) => void;
+  getTrueCurrentTime: () => number;
   getCurrentTime: () => number;
   seek: (time: number) => void;
   snap: Snap;
   setSnap: (snap: Snap) => void;
 }
 
-export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: DesignTabProps) {
+export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, seek, snap, setSnap }: DesignTabProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<DesignCanvasController | null>(null);
@@ -121,10 +122,10 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
 
     if (e.deltaY < 0) {
       // Scroll down -> forward in time
-      nextTime = findNextSnap(map, getCurrentTime(), snap);
+      nextTime = findNextSnap(map, getTrueCurrentTime(), snap);
     } else {
       // Scroll up -> backward in time
-      nextTime = findPreviousSnap(map, getCurrentTime(), snap);
+      nextTime = findPreviousSnap(map, getTrueCurrentTime(), snap);
     }
 
     if (nextTime !== null) {

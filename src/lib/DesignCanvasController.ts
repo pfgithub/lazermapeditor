@@ -567,7 +567,7 @@ export class DesignCanvasController {
       const pattern = this.map.svPatterns[sv.svPattern ?? ""] ?? {from: 0.9, to: 0.1};
 
       const y_start = this.posToY(sv.startTime);
-      const y_mid = this.posToY(sv.startTime + (sv.endTime - sv.startTime) * pattern.from);
+      const y_mid = this.posToY(sv.startTime + (sv.endTime - sv.startTime) * pattern.to);
       const y_end = this.posToY(sv.endTime);
 
       const c = 7;
