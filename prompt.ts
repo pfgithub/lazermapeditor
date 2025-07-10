@@ -25,5 +25,5 @@ export function genViewerPrompt(): string {
 	}
 	sort.sort((a, b) => a.length - b.length);
 	console.log(sort.map((l) => `${l.length}: ${l.name}`).join("\n"));
-	return `<source-file-list>\n${sourceFileList}</source-file-list>\n${sourceFileContents}\n<output-format>\nIMPORTANT: Output each affected file in one of the tags:\n- <create-file path="path/to/file">...full file contents</create-file>\n- <update-file path="path/to/file">...full file contents</update-file>\n- <delete-file path="path/to/file" />\n</output-format>\n`;
+	return `<output-format>\nIMPORTANT: Output each affected file in one of the tags:\n- <create-file path="path/to/file">...full file contents</create-file>\n- <update-file path="path/to/file">...full file contents</update-file>\n- <delete-file path="path/to/file" />\n</output-format>\n<source-file-list>\n${sourceFileList}</source-file-list>\n${sourceFileContents}\n`;
 }
