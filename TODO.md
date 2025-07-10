@@ -35,6 +35,18 @@ Export:
 - [ ] generate the full .osz file
 - [ ] import from .osz file
 
+```
+2025-07-10 20:15:58 [verbose]: Adding "Unknown Artist - Untitled (New Mapper) [Normal](1).osz" for import
+2025-07-10 20:15:58 [verbose]: Handling batch import of 1 files
+2025-07-10 20:15:58 [verbose]: ⚠️ Beatmap import is initialising...
+2025-07-10 20:15:59 [verbose]: ⚠️ [?????] Database import or population failed and has been rolled back.
+2025-07-10 20:15:59 [verbose]: 
+2025-07-10 20:15:59 [verbose]: This error has been automatically reported to the devs.
+2025-07-10 20:15:59 [verbose]: ⚠️ Could not import (Unknown Artist - Untitled (New Mapper) [Normal](1).osz)
+2025-07-10 20:15:59 [verbose]: 
+2025-07-10 20:15:59 [verbose]: This error has been automatically reported to the devs.
+```
+
 Features:
 
 - [ ] sv mapping that preserves relative note position

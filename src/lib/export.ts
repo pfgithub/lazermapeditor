@@ -96,6 +96,7 @@ export function exportToOsuFile(map: Beatmap, song: Song | null): string {
       const x = getX(note.key);
       const time = Math.round(note.startTime * 1000);
       const hitSample = "0:0:0:0:";
+      console.log(note);
 
       if (Math.abs(note.endTime - note.startTime) < 0.001) {
         // Regular Note
@@ -112,6 +113,7 @@ export function exportToOsuFile(map: Beatmap, song: Song | null): string {
       }
     });
   lines.push("");
+  console.log(lines);
 
   return lines.join("\r\n");
 }
