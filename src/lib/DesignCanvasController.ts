@@ -1,4 +1,4 @@
-import type { Note, Beatmap, Keybinds, KeybindAction, SvSegment } from "@/store";
+import type { MapElement, Beatmap, Keybinds, KeybindAction, SvSegment, MapElementKey } from "@/store";
 import {
   calculateTimingPointsInRange,
   findNearestSnap,
@@ -20,15 +20,15 @@ type DragContext =
       type: "drag";
       initialMouseTime: number;
       initialMouseLane: number;
-      originalKeys: Set<Note>;
-      newKeys: Set<Note>;
+      originalKeys: Set<MapElement>;
+      newKeys: Set<MapElement>;
     }
   | null;
 
 type ClipboardNote = {
   relativeStartTime: number;
   relativeEndTime: number;
-  key: 0 | 1 | 2 | 3;
+  key: MapElementKey;
 };
 
 export interface DesignCanvasControllerOptions {
@@ -47,7 +47,6 @@ const themeColors = {
   ringTransparent: "hsla(217.2 91.2% 59.8% / 0.2)",
 };
 
-type KeyMapEntry = 0 | 1 | 2 | 3 | "sv";
 export class DesignCanvasController {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -55,15 +54,15 @@ export class DesignCanvasController {
   private getCurrentTime: () => number;
   private snap: Snap;
   private keybinds: Keybinds;
-  private keyMap: { [code: string]: KeyMapEntry };
+  private keyMap: { [code: string]: MapElementKey };
 
   private setMap: (map: Beatmap) => void;
   private onSelectionChange: (count: number) => void;
 
   private dragContext: DragContext = null;
 
-  activeHolds: Map<KeyMapEntry, number> = new Map();
-  selectedKeyIds: Set<Note> = new Set();
+  activeHolds: Map<MapElementKey, number> = new Map();
+  selectedKeyIds: Set<MapElement> = new Set();
   selectionBox: { x1: number; t1: number; x2: number; t2: number } | null = null;
 
   constructor(options: DesignCanvasControllerOptions) {
@@ -100,12 +99,12 @@ export class DesignCanvasController {
     if (options.snap) this.snap = options.snap;
   }
 
-  private generateKeyMap(keybinds: Keybinds): { [code: string]: KeyMapEntry } {
-    const keyMap: { [code: string]: KeyMapEntry } = {};
+  private generateKeyMap(keybinds: Keybinds): { [code: string]: MapElementKey } {
+    const keyMap: { [code: string]: MapElementKey } = {};
     const actions: KeybindAction[] = ["placeNoteLane1", "placeNoteLane2", "placeNoteLane3", "placeNoteLane4"];
     actions.forEach((action, index) => {
       (keybinds[action] || []).forEach((key) => {
-        if (key) keyMap[key] = index as KeyMapEntry;
+        if (key) keyMap[key] = index as MapElementKey;
       });
     });
     for(const k of keybinds["placeSV"] ?? []) {
@@ -132,14 +131,14 @@ export class DesignCanvasController {
     return lineTime;
   }
 
-  public findKeyAt(x: number, y: number): Note | null {
+  public findKeyAt(x: number, y: number): MapElement | null {
     const rect = this.canvas.getBoundingClientRect();
     const numLanes = 4;
     const laneWidth = rect.width / numLanes;
     const lane = Math.floor(x / laneWidth);
     const viewStartTime = this.getCurrentTime() - 0.1;
     const viewEndTime = this.getCurrentTime() + 1.0;
-    let clickedKey: Note | null = null;
+    let clickedKey: MapElement | null = null;
     let minDistance = Infinity;
 
     for (const key of this.map.notes) {
@@ -166,7 +165,7 @@ export class DesignCanvasController {
     return clickedKey;
   }
 
-  public getKeysInBox(x1: number, t1: number, x2: number, t2: number): Note[] {
+  public getKeysInBox(x1: number, t1: number, x2: number, t2: number): MapElement[] {
     const y1 = this.posToY(t1);
     const y2 = this.posToY(t2);
     const rect = this.canvas.getBoundingClientRect();
@@ -176,9 +175,10 @@ export class DesignCanvasController {
     const boxRight = Math.max(x1, x2);
     const boxTop = Math.min(y1, y2);
     const boxBottom = Math.max(y1, y2);
-    const selectedKeys: Note[] = [];
+    const selectedKeys: MapElement[] = [];
 
     for (const key of this.map.notes) {
+      if (key.key === "sv") continue;
       const keyLeft = key.key * laneWidth;
       const keyRight = (key.key + 1) * laneWidth;
       if (keyLeft > boxRight || keyRight < boxLeft) continue;
@@ -232,7 +232,7 @@ export class DesignCanvasController {
       if (isMultiSelect && isSelected) {
         this.dragContext = null;
       } else {
-        const keysToDrag = new Set<Note>();
+        const keysToDrag = new Set<MapElement>();
         this.map.notes.forEach((k) => {
           if (this.selectedKeyIds.has(k)) {
             keysToDrag.add(k);
@@ -283,8 +283,14 @@ export class DesignCanvasController {
       const timeDelta = currentTime - context.initialMouseTime;
       const laneDelta = currentLane - context.initialMouseLane;
 
-      const minKey = Math.min(...Array.from(context.originalKeys.values()).map((k) => k.key));
-      const maxKey = Math.max(...Array.from(context.originalKeys.values()).map((k) => k.key));
+      let minKey: number | null = null;
+      let maxKey: number | null = null;
+      for(const entry of context.originalKeys) {
+        if(typeof entry.key === "number" && (minKey == null || entry.key < minKey)) minKey = entry.key;
+        if(typeof entry.key === "number" && (maxKey == null || entry.key > maxKey)) maxKey = entry.key;
+      }
+      minKey ??= 0;
+      maxKey ??= 0;
 
       let adjustedLaneDelta = laneDelta;
       if (minKey + laneDelta < 0) {
@@ -294,7 +300,7 @@ export class DesignCanvasController {
         adjustedLaneDelta = numLanes - 1 - maxKey;
       }
 
-      const anchorNote = context.originalKeys.values().next().value as Note | undefined;
+      const anchorNote = context.originalKeys.values().next().value as MapElement | undefined;
       let timeDeltaToApply = timeDelta;
 
       if (anchorNote) {
@@ -307,11 +313,12 @@ export class DesignCanvasController {
 
       context.newKeys.clear();
       for (const originalKey of context.originalKeys.values()) {
+        const newKey: MapElementKey = originalKey.key === "sv" ? "sv" : (originalKey.key + adjustedLaneDelta) as MapElementKey;
         context.newKeys.add({
           ...originalKey,
           startTime: originalKey.startTime + timeDeltaToApply,
           endTime: originalKey.endTime + timeDeltaToApply,
-          key: (originalKey.key + adjustedLaneDelta) as Note["key"],
+          key: newKey,
         });
       }
     }
@@ -392,7 +399,7 @@ export class DesignCanvasController {
 
       const pasteTime = findNearestSnap(this.map, this.getCurrentTime(), this.snap) ?? this.getCurrentTime();
 
-      const newNotes: Note[] = [];
+      const newNotes: MapElement[] = [];
       for (const clipboardNote of clipboardNotes) {
         // More validation
         if (
@@ -405,8 +412,8 @@ export class DesignCanvasController {
           continue;
         }
 
-        const newNote: Note = {
-          key: clipboardNote.key as Note["key"],
+        const newNote: MapElement = {
+          key: clipboardNote.key as MapElement["key"],
           startTime: pasteTime + clipboardNote.relativeStartTime,
           endTime: pasteTime + clipboardNote.relativeEndTime,
         };
@@ -441,13 +448,13 @@ export class DesignCanvasController {
   public flipHorizontal() {
     if (this.selectedKeyIds.size === 0) return;
 
-    const newFlippedNotes: Note[] = [];
+    const newFlippedNotes: MapElement[] = [];
     const selectedNotes = this.selectedKeyIds;
 
     for (const note of selectedNotes) {
-      const newNote: Note = {
+      const newNote: MapElement = {
         ...note,
-        key: (3 - note.key) as Note["key"],
+        key: note.key === "sv" ? note.key : (3 - note.key) as MapElement["key"],
       };
       newFlippedNotes.push(newNote);
     }
@@ -512,27 +519,7 @@ export class DesignCanvasController {
     const endTime = findNearestSnap(this.map, this.getCurrentTime(), this.snap);
     if (endTime == null) return;
 
-    if(keyIndex === "sv") {
-      const newSv: SvSegment = {
-        startTime: Math.min(startTime, endTime),
-        endTime: Math.max(startTime, endTime),
-        pattern: "0",
-      };
-      const existingSv = this.map.svs.find(
-        (k) => k.startTime === newSv.startTime,
-      );
-      if(existingSv) {
-        const newSvs = this.map.svs.filter(sv => sv !== existingSv);
-        this.setMap({ ...this.map, svs: newSvs });
-        return;
-      }
-      if(startTime === endTime) return; // no zero-length SVs
-      const newSvs = [...this.map.svs, newSv].sort((a, b) => a.startTime - b.startTime);
-      this.setMap({ ...this.map, svs: newSvs });
-      return;
-    }
-
-    const newKey: Note = {
+    const newKey: MapElement = {
       startTime: Math.min(startTime, endTime),
       endTime: Math.max(startTime, endTime),
       key: keyIndex,
@@ -592,8 +579,29 @@ export class DesignCanvasController {
       ctx.stroke();
     }
 
-    const drawKey = (key: Note, isSelected: boolean) => {
+    const drawSv = (sv: MapElement, isSelected: boolean) => {
+      const pattern = this.map.svPatterns[sv.svPattern ?? ""] ?? {from: 0.9, to: 0.1};
+
+      const y_start = this.posToY(sv.startTime);
+      const y_mid = this.posToY(sv.startTime + (sv.endTime - sv.startTime) * pattern.from);
+      const y_end = this.posToY(sv.endTime);
+
+      const c = 7;
+      const c_before = c * pattern.to;
+      const c_after = c * (1 - pattern.to);
+
+      // Hold Note
+      ctx.fillStyle = "#AAA";
+      ctx.fillRect(0, y_end, c_before, y_mid - y_end);
+      ctx.fillStyle = "#FFF";
+      ctx.fillRect(0, y_mid, c_after, y_start - y_mid);
+    };
+
+    const drawKey = (key: MapElement, isSelected: boolean) => {
       if (key.endTime < viewStartTime || key.startTime > viewEndTime) return;
+      if (key.key === "sv") {
+        return drawSv(key, isSelected);
+      }
       if (key.endTime < time - 0.0001) return; // make notes disappear as soon as they go past the line
 
       const y_start = this.posToY(key.startTime);
@@ -645,63 +653,14 @@ export class DesignCanvasController {
       drawKey({
         startTime,
         endTime: findNearestSnap(this.map, time, this.snap) ?? time,
-        key: +lane as Note["key"],
+        key: +lane as MapElement["key"],
       }, false);
-    }
-
-    // --- Draw SVs ---
-    for (const sv of this.map.svs) {
-      if (sv.endTime < viewStartTime || sv.startTime > viewEndTime) continue;
-
-      const pattern = this.map.svPatterns[sv.pattern ?? ""] ?? {from: 0.9, to: 0.1};
-
-      const y_start = this.posToY(sv.startTime);
-      const y_mid = this.posToY(sv.startTime + (sv.endTime - sv.startTime) * pattern.from);
-      const y_end = this.posToY(sv.endTime);
-
-      const c = 7;
-      const c_before = c * pattern.to;
-      const c_after = c * (1 - pattern.to);
-
-      // Hold Note
-      ctx.fillStyle = "#AAA";
-      ctx.fillRect(0, y_end, c_before, y_mid - y_end);
-      ctx.fillStyle = "#FFF";
-      ctx.fillRect(0, y_mid, c_after, y_start - y_mid);
     }
 
     // --- Draw Dragged Keys Preview ---
     if (this.dragContext?.type === "drag") {
       for (const key of this.dragContext.newKeys) {
-        if (key.endTime < viewStartTime || key.startTime > viewEndTime) continue;
-        const y_start = this.posToY(key.startTime);
-        const y_end = this.posToY(key.endTime);
-        const x_start = key.key * laneWidth;
-        const color = getColorForSnap(getSnapForTime(this.map, key.startTime));
-
-        if (key.startTime === key.endTime) {
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 8;
-          ctx.beginPath();
-          ctx.moveTo(x_start + 5, y_start);
-          ctx.lineTo(x_start + laneWidth - 5, y_start);
-          ctx.stroke();
-          ctx.strokeStyle = themeColors.ring;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x_start + 3, y_start - 5, laneWidth - 6, 10);
-        } else {
-          const noteWidth = laneWidth - 10;
-          ctx.fillStyle = color;
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 2;
-          ctx.globalAlpha = 0.4;
-          ctx.fillRect(x_start + 5, y_end, noteWidth, y_start - y_end);
-          ctx.globalAlpha = 1.0;
-          ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
-          ctx.strokeStyle = themeColors.ring;
-          ctx.lineWidth = 4;
-          ctx.strokeRect(x_start + 5, y_end, noteWidth, y_start - y_end);
-        }
+        drawKey(key, true);
       }
     }
 

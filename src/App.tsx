@@ -181,10 +181,11 @@ export function App() {
   const getCurrentTime = useCallback(() => {
     const map = mapRef.current;
     let current = audioControllerRef.current?.getCurrentTime() ?? 0
-    for(const sv of map.svs) {
+    for(const sv of map.notes) {
+      if(sv.key !== "sv") continue;
       if(current >= sv.startTime && current < sv.endTime) {
         // modify
-        const pattern = map.svPatterns[sv.pattern ?? ""] ?? {from: 0.9, to: 0.1};
+        const pattern = map.svPatterns[sv.svPattern ?? ""] ?? {from: 0.9, to: 0.1};
         const before = (current - sv.startTime) / (sv.endTime - sv.startTime);
         const after = svRemap(before, pattern.from, pattern.to);
         current = after * (sv.endTime - sv.startTime) + sv.startTime;

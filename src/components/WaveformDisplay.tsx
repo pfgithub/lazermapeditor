@@ -38,6 +38,9 @@ const drawNotes = (
     if (note.endTime < viewStartTime || note.startTime > viewEndTime) {
       continue;
     }
+    if (note.key === "sv") {
+      continue;
+    }
 
     const x_start = timeToX(note.startTime);
     const y = note.key * laneHeight + noteYOffset;

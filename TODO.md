@@ -25,6 +25,7 @@ TODO:
 - [ ] add an errors thing that shows overlapping notes, svs with notes in them, ...
 - [ ] add sv toggle
 - [ ] add fps counter
+- [ ] remove findKeyAt, replace it with getKeysInBox
 
 Export:
 

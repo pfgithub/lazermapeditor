@@ -19,10 +19,12 @@ export type SvPattern = {
   to: number,
 };
 
-export type Note = {
+export type MapElementKey = 0 | 1 | 2 | 3 | "sv";
+export type MapElement = {
   startTime: number;
   endTime: number;
-  key: 0 | 1 | 2 | 3;
+  key: MapElementKey;
+  svPattern?: string;
 };
 
 export type Beatmap = {
@@ -31,8 +33,7 @@ export type Beatmap = {
   creator: string;
   version: string;
   timing: TimingSegment[]; // sorted by start time
-  notes: Note[]; // sorted by time
-  svs: SvSegment[]; // sorted by start time
+  notes: MapElement[]; // sorted by time
   svPatterns: Record<string, SvPattern>;
 };
 
@@ -72,7 +73,6 @@ const defaultMap: Beatmap = {
   version: "Normal",
   timing: [],
   notes: [],
-  svs: [],
   svPatterns: {},
 };
 
