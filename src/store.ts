@@ -68,7 +68,7 @@ interface AppState {
   loadFromDb: () => Promise<void>;
 }
 
-const defaultMap: Beatmap = {
+export const defaultMap: Beatmap = {
   title: "Untitled",
   artist: "Unknown Artist",
   creator: "New Mapper",
