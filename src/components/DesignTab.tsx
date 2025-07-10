@@ -164,14 +164,24 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
         </Button>
       </div>
 
-      <div
-        className="flex-grow relative bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg overflow-hidden"
-        ref={containerRef}
-        onWheel={handleWheel}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-      >
-        <canvas ref={canvasRef} className="absolute" onMouseDown={handleMouseDown} />
+      <div className="flex flex-row flex-grow gap-4 min-h-0">
+        <aside className="w-64 shrink-0 bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg">
+          {/* Left panel, blank for now */}
+        </aside>
+
+        <div
+          className="flex-grow relative bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg overflow-hidden"
+          ref={containerRef}
+          onWheel={handleWheel}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+        >
+          <canvas ref={canvasRef} className="absolute" onMouseDown={handleMouseDown} />
+        </div>
+
+        <aside className="w-64 shrink-0 bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg">
+          {/* Right panel, blank for now */}
+        </aside>
       </div>
     </div>
   );
