@@ -1,6 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { KeybindAction, useAppStore } from "@/store";
+import { type KeybindAction, useAppStore } from "@/store";
 import { useState, useEffect, useRef } from "react";
 
 const keybindLabels: Record<KeybindAction, string> = {
@@ -53,7 +53,7 @@ function KeybindInput({ action }: { action: KeybindAction }) {
       document.removeEventListener("keydown", handleKeyDown, true);
       document.removeEventListener("mousedown", handleClickOutside, true);
     };
-  }, [isBinding, action, setKeybind, bindingIndex]);
+  }, [action, setKeybind, bindingIndex]);
 
   const currentKeys = keybinds[action] || [];
 
