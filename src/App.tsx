@@ -111,22 +111,6 @@ export function App() {
     };
   }, []);
 
-  const getCurrentTime = useCallback(() => {
-    const map = mapRef.current;
-    let current = audioControllerRef.current?.getCurrentTime() ?? 0;
-    for (const sv of map.svs) {
-      if (current >= sv.startTime && current < sv.endTime) {
-        // Use a default pattern if the assigned one doesn't exist.
-        const pattern = map.svPatterns[sv.pattern] ?? { from: 0.5, to: 0.5 };
-        const segmentProgress = (current - sv.startTime) / (sv.endTime - sv.startTime);
-        const remappedProgress = svRemap(segmentProgress, pattern.from, pattern.to);
-        current = remappedProgress * (sv.endTime - sv.startTime) + sv.startTime;
-        break; // Assume no overlapping SVs
-      }
-    }
-    return current;
-  }, []);
-
   // Global keybindings
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -192,7 +176,23 @@ export function App() {
         spaceDownTimeRef.current = null;
       }
     };
-  }, [map, designSnap, keybinds, activeTab, getCurrentTime]); // getCurrentTime is needed
+  }, [map, designSnap, keybinds, activeTab]);
+
+  const getCurrentTime = useCallback(() => {
+    const map = mapRef.current;
+    let current = audioControllerRef.current?.getCurrentTime() ?? 0
+    for(const sv of map.svs) {
+      if(current >= sv.startTime && current < sv.endTime) {
+        // modify
+        const pattern = map.svPatterns[sv.pattern ?? ""] ?? {from: 0.9, to: 0.1};
+        const before = (current - sv.startTime) / (sv.endTime - sv.startTime);
+        const after = svRemap(before, pattern.from, pattern.to);
+        current = after * (sv.endTime - sv.startTime) + sv.startTime;
+        break;
+      }
+    }
+    return current;
+  }, []);
 
   const handleSeek = (time: number) => {
     audioControllerRef.current?.seek(time);
@@ -271,13 +271,13 @@ export function App() {
               )}
             </Button>
             <div className="text-sm font-mono w-28 text-center text-[hsl(215,20.2%,65.1%)]">
-              {formatTime(audioControllerRef.current?.getCurrentTime() ?? 0)} / {formatTime(duration)}
+              {formatTime(currentTimeRounded)} / {formatTime(duration)}
             </div>
             <input
               type="range"
               min="0"
               max={duration || 1}
-              value={audioControllerRef.current?.getCurrentTime() ?? 0}
+              value={currentTimeRounded}
               step="0.01"
               className="w-full h-2 bg-[hsl(217.2,32.6%,17.5%)] rounded-lg appearance-none cursor-pointer"
               onChange={(e) => handleSeek(parseFloat(e.target.value))}

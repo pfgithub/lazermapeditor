@@ -11,12 +11,12 @@ export type TimingSegment = {
 export type SvSegment = {
   startTime: number;
   endTime: number;
-  pattern: string;
+  pattern: string,
 };
 
 export type SvPattern = {
-  from: number;
-  to: number;
+  from: number,
+  to: number,
 };
 
 export type Note = {
@@ -73,9 +73,7 @@ const defaultMap: Beatmap = {
   timing: [],
   notes: [],
   svs: [],
-  svPatterns: {
-    "0": { from: 0.5, to: 0.5 },
-  },
+  svPatterns: {},
 };
 
 const defaultKeybinds: Keybinds = {
