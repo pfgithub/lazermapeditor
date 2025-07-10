@@ -17,11 +17,11 @@ const keybindLabels: Record<KeybindAction, string> = {
 function KeybindInput({ action }: { action: KeybindAction }) {
   const keybinds = useAppStore((s) => s.keybinds);
   const setKeybind = useAppStore((s) => s.setKeybind);
-  const [isBinding, setIsBinding] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [bindingIndex, setBindingIndex] = useState<number | null>(null);
+  const buttonRefs = [useRef<HTMLButtonElement>(null), useRef<HTMLButtonElement>(null)];
 
   useEffect(() => {
-    if (!isBinding) return;
+    if (bindingIndex === null) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       e.preventDefault();
@@ -32,13 +32,17 @@ function KeybindInput({ action }: { action: KeybindAction }) {
         return;
       }
 
-      setKeybind(action, e.code);
-      setIsBinding(false);
+      setKeybind(action, e.code, bindingIndex);
+      setBindingIndex(null);
     };
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
-        setIsBinding(false);
+      if (
+        bindingIndex !== null &&
+        buttonRefs[bindingIndex]?.current &&
+        !buttonRefs[bindingIndex]!.current!.contains(e.target as Node)
+      ) {
+        setBindingIndex(null);
       }
     };
 
@@ -49,24 +53,26 @@ function KeybindInput({ action }: { action: KeybindAction }) {
       document.removeEventListener("keydown", handleKeyDown, true);
       document.removeEventListener("mousedown", handleClickOutside, true);
     };
-  }, [isBinding, action, setKeybind]);
+  }, [isBinding, action, setKeybind, bindingIndex]);
 
-  const currentKey = keybinds[action];
+  const currentKeys = keybinds[action] || [];
 
   return (
     <div className="grid grid-cols-3 items-center gap-4">
-      <Label htmlFor={action} className="text-right">
-        {keybindLabels[action]}
-      </Label>
-      <Button
-        id={action}
-        ref={buttonRef}
-        variant="outline"
-        onClick={() => setIsBinding(true)}
-        className="col-span-2 justify-start font-mono"
-      >
-        {isBinding ? "Press a key..." : currentKey}
-      </Button>
+      <Label className="text-right">{keybindLabels[action]}</Label>
+      <div className="col-span-2 flex gap-2">
+        {[0, 1].map((index) => (
+          <Button
+            key={index}
+            ref={buttonRefs[index]}
+            variant="outline"
+            onClick={() => setBindingIndex(index)}
+            className="flex-1 justify-start font-mono"
+          >
+            {bindingIndex === index ? "Press a key..." : currentKeys[index] || "Unbound"}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 }

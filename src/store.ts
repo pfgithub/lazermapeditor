@@ -38,7 +38,7 @@ export type KeybindAction =
   | "placeNoteLane3"
   | "placeNoteLane4";
 
-export type Keybinds = Record<KeybindAction, string>; // Maps action to KeyboardEvent['code']
+export type Keybinds = Record<KeybindAction, string[]>; // Maps action to KeyboardEvent['code'] array
 
 interface AppState {
   map: Beatmap;
@@ -47,7 +47,7 @@ interface AppState {
   keybinds: Keybinds;
   setMap: (map: Beatmap) => void;
   setSongFile: (songFile: File | null) => void;
-  setKeybind: (action: KeybindAction, key: string) => void;
+  setKeybind: (action: KeybindAction, key: string, index: number) => void;
   loadFromDb: () => Promise<void>;
 }
 
@@ -61,14 +61,14 @@ const defaultMap: Beatmap = {
 };
 
 const defaultKeybinds: Keybinds = {
-  temporaryPlay: "Space",
-  seekBackward: "KeyA",
-  seekForward: "Semicolon",
-  deleteSelection: "Delete",
-  placeNoteLane1: "KeyD",
-  placeNoteLane2: "KeyF",
-  placeNoteLane3: "KeyJ",
-  placeNoteLane4: "KeyK",
+  temporaryPlay: ["Space"],
+  seekBackward: ["KeyA"],
+  seekForward: ["Semicolon"],
+  deleteSelection: ["Delete", "Backspace"],
+  placeNoteLane1: ["KeyD"],
+  placeNoteLane2: ["KeyF"],
+  placeNoteLane3: ["KeyJ", "KeyG"],
+  placeNoteLane4: ["KeyK", "KeyH"],
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -82,8 +82,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     saveMap(newMap).catch((err) => console.error("Failed to save map", err));
   },
 
-  setKeybind: (action, key) => {
-    const newKeybinds = { ...get().keybinds, [action]: key };
+  setKeybind: (action, key, index) => {
+    const newKeybinds = { ...get().keybinds };
+    const currentKeys = newKeybinds[action] ? [...newKeybinds[action]] : [];
+    while (currentKeys.length <= index) {
+      currentKeys.push("");
+    }
+    currentKeys[index] = key;
+    newKeybinds[action] = currentKeys;
+
     set({ keybinds: newKeybinds });
     saveSettings(newKeybinds).catch((err) => console.error("Failed to save keybinds", err));
   },
@@ -127,7 +134,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         get().setSongFile(songFile);
       }
       if (keybindsData) {
-        set({ keybinds: { ...defaultKeybinds, ...keybindsData } });
+        // Migration for users with old string-based keybinds
+        const migratedKeybinds: Partial<Keybinds> = {};
+        for (const key in keybindsData) {
+          const action = key as KeybindAction;
+          const value = (keybindsData as any)[action];
+          if (typeof value === "string") {
+            migratedKeybinds[action] = [value];
+          } else if (Array.isArray(value)) {
+            migratedKeybinds[action] = value;
+          }
+        }
+        set({ keybinds: { ...defaultKeybinds, ...migratedKeybinds } });
       }
     } catch (error) {
       console.error("Failed to load data from IndexedDB", error);

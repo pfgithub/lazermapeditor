@@ -1,4 +1,4 @@
-import type { Note, Beatmap, Keybinds } from "@/store";
+import type { Note, Beatmap, Keybinds, KeybindAction } from "@/store";
 import {
   calculateTimingPointsInRange,
   findNearestSnap,
@@ -100,12 +100,14 @@ export class DesignCanvasController {
   }
 
   private generateKeyMap(keybinds: Keybinds): { [code: string]: 0 | 1 | 2 | 3 } {
-    return {
-      [keybinds.placeNoteLane1]: 0,
-      [keybinds.placeNoteLane2]: 1,
-      [keybinds.placeNoteLane3]: 2,
-      [keybinds.placeNoteLane4]: 3,
-    };
+    const keyMap: { [code: string]: 0 | 1 | 2 | 3 } = {};
+    const actions: KeybindAction[] = ["placeNoteLane1", "placeNoteLane2", "placeNoteLane3", "placeNoteLane4"];
+    actions.forEach((action, index) => {
+      (keybinds[action] || []).forEach((key) => {
+        if (key) keyMap[key] = index as 0 | 1 | 2 | 3;
+      });
+    });
+    return keyMap;
   }
 
   public posToY(lineTime: number): number {
@@ -473,7 +475,7 @@ export class DesignCanvasController {
       }
     }
 
-    if (e.code === this.keybinds.deleteSelection || e.code === "Backspace") {
+    if (this.keybinds.deleteSelection.includes(e.code)) {
       if (this.selectedKeyIds.size > 0) {
         e.preventDefault();
         this.handleDelete();

@@ -108,7 +108,7 @@ export function App() {
   // Global keybindings
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === keybinds.temporaryPlay) {
+      if (keybinds.temporaryPlay.includes(e.code)) {
         if (!allowKeyEvent(e)) return;
 
         // Prevent repeated plays when holding space
@@ -123,12 +123,12 @@ export function App() {
 
         spaceDownTimeRef.current = controller.getCurrentTime();
         controller.play();
-      } else if (e.code === keybinds.seekBackward) {
+      } else if (keybinds.seekBackward.includes(e.code)) {
         if (!allowKeyEvent(e)) return;
         e.preventDefault();
         const prevSnap = findPreviousSnap(map, getCurrentTime(), designSnap);
         if (prevSnap !== null) handleSeek(prevSnap);
-      } else if (e.code === keybinds.seekForward) {
+      } else if (keybinds.seekForward.includes(e.code)) {
         if (!allowKeyEvent(e)) return;
         e.preventDefault();
         const nextSnap = findNextSnap(map, getCurrentTime(), designSnap);
@@ -137,7 +137,7 @@ export function App() {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code !== keybinds.temporaryPlay) return;
+      if (!keybinds.temporaryPlay.includes(e.code)) return;
       if (!allowKeyEvent(e)) return;
 
       // If we weren't in a "hold-to-play" state, do nothing.
