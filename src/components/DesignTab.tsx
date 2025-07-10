@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useAppStore, type MapElement, type Beatmap } from "@/store";
@@ -21,6 +21,7 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
   const controllerRef = useRef<DesignCanvasController | null>(null);
   const [selectionCount, setSelectionCount] = useState(0);
   const keybinds = useAppStore((s) => s.keybinds);
+  const clearListenersRef = useRef<(() => void) | undefined>(undefined);
 
   // Initialize and update canvas controller
   useEffect(() => {
@@ -85,15 +86,9 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
       if (containerWidth === 0 || containerHeight === 0) return;
 
       const dpr = window.devicePixelRatio;
-      const targetAspectRatio = 9 / 16;
 
       let canvasWidth = containerWidth;
-      let canvasHeight = canvasWidth / targetAspectRatio;
-
-      if (canvasHeight > containerHeight) {
-        canvasHeight = containerHeight;
-        canvasWidth = canvasHeight * targetAspectRatio;
-      }
+      let canvasHeight = containerHeight;
 
       canvas.width = canvasWidth * dpr;
       canvas.height = canvasHeight * dpr;
@@ -133,15 +128,32 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const clearListeners = () => {
+    clearListenersRef.current?.();
+    clearListenersRef.current = undefined;
+  };
+
+  useEffect(() => {
+    return clearListeners;
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     controllerRef.current?.handleMouseDown(e.nativeEvent);
-  };
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    controllerRef.current?.handleMouseMove(e.nativeEvent);
-  };
-  const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-    controllerRef.current?.handleMouseUp(e.nativeEvent);
-  };
+    const onMouseMove = (e: MouseEvent) => {
+      controllerRef.current?.handleMouseMove(e);
+    };
+    const onMouseUp = (e: MouseEvent) => {
+      clearListeners();
+      controllerRef.current?.handleMouseUp(e);
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    clearListeners();
+    clearListenersRef.current = () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    }
+  }, []);
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -165,21 +177,19 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
       </div>
 
       <div className="flex flex-row flex-grow gap-4 min-h-0">
-        <aside className="w-64 shrink-0 bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg">
+        <aside className="w-0 flex-grow bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg">
           {/* Left panel, blank for now */}
         </aside>
 
         <div
-          className="flex-grow relative bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg overflow-hidden"
+          className="shrink-0 aspect-9/16 relative bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg overflow-hidden"
           ref={containerRef}
           onWheel={handleWheel}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
         >
           <canvas ref={canvasRef} className="absolute" onMouseDown={handleMouseDown} />
         </div>
 
-        <aside className="w-64 shrink-0 bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg">
+        <aside className="w-0 flex-grow bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg">
           {/* Right panel, blank for now */}
         </aside>
       </div>
