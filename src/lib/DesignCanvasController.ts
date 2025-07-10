@@ -39,7 +39,7 @@ export interface DesignCanvasControllerOptions {
   snap: Snap;
   keybinds: Keybinds;
   setMap: (map: Beatmap) => void;
-  onSelectionChange?: (count: number) => void;
+  onSelectionChange?: (sel: Set<MapElement>) => void;
 }
 
 const themeColors = {
@@ -58,12 +58,12 @@ export class DesignCanvasController {
   private keyMap: { [code: string]: MapElementKey };
 
   private setMap: (map: Beatmap) => void;
-  private onSelectionChange: (count: number) => void;
+  private onSelectionChange: (sel: Set<MapElement>) => void;
 
   private dragContext: DragContext = null;
 
   activeHolds: Map<MapElementKey, number> = new Map();
-  selectedKeyIds: Set<MapElement> = new Set();
+  selectedElements: Set<MapElement> = new Set();
   selectionBox: { x1: number; t1: number; x2: number; t2: number } | null = null;
 
   constructor(options: DesignCanvasControllerOptions) {
@@ -192,18 +192,18 @@ export class DesignCanvasController {
     const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
 
     if (clickedKey) {
-      const isSelected = this.selectedKeyIds.has(clickedKey);
+      const isSelected = this.selectedElements.has(clickedKey);
 
       if (isMultiSelect) {
         if (isSelected) {
-          this.selectedKeyIds.delete(clickedKey);
+          this.selectedElements.delete(clickedKey);
         } else {
-          this.selectedKeyIds.add(clickedKey);
+          this.selectedElements.add(clickedKey);
         }
       } else {
         if (!isSelected) {
-          this.selectedKeyIds.clear();
-          this.selectedKeyIds.add(clickedKey);
+          this.selectedElements.clear();
+          this.selectedElements.add(clickedKey);
         }
       }
 
@@ -213,7 +213,7 @@ export class DesignCanvasController {
       } else {
         const keysToDrag = new Set<MapElement>();
         this.map.notes.forEach((k) => {
-          if (this.selectedKeyIds.has(k)) {
+          if (this.selectedElements.has(k)) {
             keysToDrag.add(k);
           }
         });
@@ -229,7 +229,7 @@ export class DesignCanvasController {
     } else {
       // No key clicked, start box selection
       if (!isMultiSelect) {
-        this.selectedKeyIds.clear();
+        this.selectedElements.clear();
       }
       const time = this.yToPos(y);
       this.dragContext = {
@@ -239,7 +239,7 @@ export class DesignCanvasController {
       };
       this.selectionBox = { x1: x, t1: time, x2: x, t2: time };
     }
-    this.onSelectionChange(this.selectedKeyIds.size);
+    this.onSelectionChange(this.selectedElements);
   }
 
   public handleMouseMove(e: MouseEvent) {
@@ -321,9 +321,9 @@ export class DesignCanvasController {
 
           const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
           if (isMultiSelect) {
-            keyIdsInBox.forEach((id) => this.selectedKeyIds.add(id));
+            keyIdsInBox.forEach((id) => this.selectedElements.add(id));
           } else {
-            this.selectedKeyIds = keyIdsInBox;
+            this.selectedElements = keyIdsInBox;
           }
         }
       }
@@ -336,16 +336,16 @@ export class DesignCanvasController {
       this.setMap({ ...this.map, notes: newKeys });
 
       const newSelectedKeyIds = new Set(context.newKeys);
-      this.selectedKeyIds = newSelectedKeyIds;
+      this.selectedElements = newSelectedKeyIds;
     }
     this.dragContext = null;
-    this.onSelectionChange(this.selectedKeyIds.size);
+    this.onSelectionChange(this.selectedElements);
   }
 
   private async handleCopy() {
-    if (this.selectedKeyIds.size === 0) return;
+    if (this.selectedElements.size === 0) return;
 
-    const selectedNotes = Array.from(this.selectedKeyIds);
+    const selectedNotes = Array.from(this.selectedElements);
     if (selectedNotes.length === 0) return;
 
     // Find the earliest start time to make other times relative
@@ -400,35 +400,35 @@ export class DesignCanvasController {
       }
 
       // Deselect old notes
-      this.selectedKeyIds.clear();
+      this.selectedElements.clear();
 
       // Add new notes to map
       const updatedNotes = [...this.map.notes, ...newNotes].sort((a, b) => a.startTime - b.startTime);
       this.setMap({ ...this.map, notes: updatedNotes });
 
       // Select the new notes.
-      newNotes.forEach((note) => this.selectedKeyIds.add(note));
-      this.onSelectionChange(this.selectedKeyIds.size);
+      newNotes.forEach((note) => this.selectedElements.add(note));
+      this.onSelectionChange(this.selectedElements);
     } catch (err) {
       console.warn("Failed to paste notes from clipboard:", err);
     }
   }
 
   private handleDelete() {
-    if (this.selectedKeyIds.size === 0) return;
+    if (this.selectedElements.size === 0) return;
 
-    const newKeys = this.map.notes.filter((key) => !this.selectedKeyIds.has(key));
+    const newKeys = this.map.notes.filter((key) => !this.selectedElements.has(key));
 
     this.setMap({ ...this.map, notes: newKeys });
-    this.selectedKeyIds.clear();
-    this.onSelectionChange(this.selectedKeyIds.size);
+    this.selectedElements.clear();
+    this.onSelectionChange(this.selectedElements);
   }
 
   public flipHorizontal() {
-    if (this.selectedKeyIds.size === 0) return;
+    if (this.selectedElements.size === 0) return;
 
     const newFlippedNotes: MapElement[] = [];
-    const selectedNotes = this.selectedKeyIds;
+    const selectedNotes = this.selectedElements;
 
     for (const note of selectedNotes) {
       const newNote: MapElement = {
@@ -444,8 +444,8 @@ export class DesignCanvasController {
 
     this.setMap({ ...this.map, notes: allNotes });
 
-    this.selectedKeyIds = new Set(newFlippedNotes);
-    this.onSelectionChange(this.selectedKeyIds.size);
+    this.selectedElements = new Set(newFlippedNotes);
+    this.onSelectionChange(this.selectedElements);
   }
 
   public handleKeyDown(e: KeyboardEvent) {
@@ -466,7 +466,7 @@ export class DesignCanvasController {
     }
 
     if (this.keybinds.deleteSelection.includes(e.code)) {
-      if (this.selectedKeyIds.size > 0) {
+      if (this.selectedElements.size > 0) {
         e.preventDefault();
         this.handleDelete();
       }
@@ -635,7 +635,7 @@ export class DesignCanvasController {
     for (const key of this.map.notes) {
       const keyId = key;
       if (draggedOriginalKeys?.has(keyId)) continue;
-      drawKey(key, this.selectedKeyIds.has(keyId));
+      drawKey(key, this.selectedElements.has(keyId));
     }
 
     // --- Draw in-progress notes ---

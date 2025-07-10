@@ -19,7 +19,7 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<DesignCanvasController | null>(null);
-  const [selectionCount, setSelectionCount] = useState(0);
+  const [selectedElements, setSelectedElements] = useState<Set<MapElement>>(new Set());
   const keybinds = useAppStore((s) => s.keybinds);
   const clearListenersRef = useRef<(() => void) | undefined>(undefined);
 
@@ -37,7 +37,7 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
         keybinds,
         // Callbacks to update component state
         setMap,
-        onSelectionChange: setSelectionCount,
+        onSelectionChange: els => setSelectedElements(new Set(els)),
       });
     } else {
       controllerRef.current.update({
@@ -170,7 +170,7 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
           onClick={() => controllerRef.current?.flipHorizontal()}
           variant="outline"
           size="sm"
-          disabled={selectionCount === 0}
+          disabled={selectedElements.size === 0}
         >
           Flip Horizontal
         </Button>
