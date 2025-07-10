@@ -10,9 +10,9 @@ export type TimingSegment = {
 
 export type SvSegment = {
   startTime: number;
-  midTime: number;
   endTime: number;
-  firstSpeed: number;
+  dur: number;
+  sv: number;
 };
 
 export type Note = {
@@ -44,7 +44,8 @@ export type KeybindAction =
   | "placeNoteLane1"
   | "placeNoteLane2"
   | "placeNoteLane3"
-  | "placeNoteLane4";
+  | "placeNoteLane4"
+  | "placeSV";
 
 export type Keybinds = Record<KeybindAction, string[]>; // Maps action to KeyboardEvent['code'] array
 
@@ -78,6 +79,7 @@ const defaultKeybinds: Keybinds = {
   placeNoteLane2: ["KeyF"],
   placeNoteLane3: ["KeyJ", "KeyG"],
   placeNoteLane4: ["KeyK", "KeyH"],
+  placeSV: ["KeyT"],
 };
 
 export const useAppStore = create<AppState>((set, get) => ({

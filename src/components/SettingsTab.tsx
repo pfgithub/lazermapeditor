@@ -11,6 +11,7 @@ const keybindLabels: Record<KeybindAction, string> = {
   placeNoteLane2: "Place Note (Lane 2)",
   placeNoteLane3: "Place Note (Lane 3)",
   placeNoteLane4: "Place Note (Lane 4)",
+  placeSV: "Place SV",
 };
 
 function KeybindInput({ action }: { action: KeybindAction }) {

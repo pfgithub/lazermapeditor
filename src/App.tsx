@@ -134,14 +134,6 @@ export function App() {
         e.preventDefault();
         const nextSnap = findNextSnap(map, getCurrentTime(), designSnap);
         if (nextSnap !== null) handleSeek(nextSnap);
-      } else if (e.code === "KeyT") {
-        if (!allowKeyEvent(e)) return;
-        if (activeTab !== "design") return;
-        if (e.repeat) return;
-        e.preventDefault();
-        if (tDownTimeRef.current === null) {
-          tDownTimeRef.current = getCurrentTime();
-        }
       }
     };
 
@@ -161,28 +153,6 @@ export function App() {
         controller.pause();
         controller.seek(spaceDownTimeRef.current);
         spaceDownTimeRef.current = null;
-      }
-
-      if (e.code === "KeyT") {
-        if (!allowKeyEvent(e)) return;
-        if (activeTab !== "design") return;
-        if (tDownTimeRef.current === null) return;
-
-        e.preventDefault();
-        const startTime = tDownTimeRef.current;
-        const endTime = getCurrentTime();
-        tDownTimeRef.current = null;
-
-        if (endTime > startTime) {
-          const newSvSegment: SvSegment = {
-            startTime,
-            endTime,
-            midTime: startTime + (endTime - startTime) / 2,
-            firstSpeed: 0.5,
-          };
-          const newSvs = [...map.svs, newSvSegment].sort((a, b) => a.startTime - b.startTime);
-          setMap({ ...map, svs: newSvs });
-        }
       }
     };
 
