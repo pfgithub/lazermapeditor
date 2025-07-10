@@ -23,6 +23,7 @@ TODO:
   - ran it once but it generated a diff
 - [ ] allow creating sv patterns and bulk assigning patterns to svs
 - [ ] add an errors thing that shows overlapping notes, svs with notes in them, ...
+- [ ] add sv toggle
 
 Export:
 
