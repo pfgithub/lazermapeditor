@@ -279,69 +279,61 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
         </div>
 
         <aside className="w-0 flex-grow bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg p-4 flex flex-col gap-4">
-          {selectedSvNotes.length > 0 ? (
-            <>
-              <div className="shrink-0 text-center">
-                <h3 className="font-semibold">SV Pattern Editor</h3>
-                <p className="text-xs text-[hsl(215,20.2%,65.1%)]">
-                  {selectedSvNotes.length} SV note{selectedSvNotes.length > 1 && "s"} selected
-                </p>
-              </div>
+          <div className="shrink-0 text-center">
+            <h3 className="font-semibold">SV Pattern Editor</h3>
+            <p className="text-xs text-[hsl(215,20.2%,65.1%)]">
+              {selectedSvNotes.length} SV note{selectedSvNotes.length > 1 && "s"} selected
+            </p>
+          </div>
 
-              <Button onClick={handleCreatePattern} size="sm">
-                Create New Pattern
+          <Button onClick={handleCreatePattern} size="sm">
+            Create New Pattern
+          </Button>
+
+          <div className="flex-grow space-y-1 overflow-y-auto pr-2 -mr-2">
+            {Object.keys(map.svPatterns).length > 0 ? (
+              Object.entries(map.svPatterns).map(([patternId, pattern]) => (
+                <Button
+                  key={patternId}
+                  variant={selectedPatternId === patternId ? "secondary" : "ghost"}
+                  onClick={() => setSelectedPatternId(patternId)}
+                  className="w-full h-auto min-h-8 justify-start text-left"
+                  size="sm"
+                >
+                  <span className="truncate">{pattern.name}</span>
+                </Button>
+              ))
+            ) : (
+              <p className="text-center text-xs text-[hsl(215,20.2%,65.1%)] py-4">No patterns created yet.</p>
+            )}
+          </div>
+
+          {selectedPatternId && map.svPatterns[selectedPatternId] && (
+            <div className="shrink-0 space-y-4 border-t border-[hsl(217.2,32.6%,17.5%)] pt-4">
+              <div>
+                <Label htmlFor="pattern-name" className="text-xs">
+                  Pattern Name
+                </Label>
+                <Input
+                  id="pattern-name"
+                  value={map.svPatterns[selectedPatternId]!.name}
+                  onChange={(e) => handleRenamePattern(selectedPatternId, e.target.value)}
+                  className="h-8 mt-1"
+                />
+              </div>
+              <div className="max-w-24">
+                <SvEditor
+                  from={map.svPatterns[selectedPatternId]!.from}
+                  to={map.svPatterns[selectedPatternId]!.to}
+                  onChange={(from, to) => handleUpdatePattern(selectedPatternId, from, to)}
+                />
+              </div>
+              <Button onClick={handleAssignPattern} className="w-full">
+                Assign to Selection
               </Button>
-
-              <div className="flex-grow space-y-1 overflow-y-auto pr-2 -mr-2">
-                {Object.keys(map.svPatterns).length > 0 ? (
-                  Object.entries(map.svPatterns).map(([patternId, pattern]) => (
-                    <Button
-                      key={patternId}
-                      variant={selectedPatternId === patternId ? "secondary" : "ghost"}
-                      onClick={() => setSelectedPatternId(patternId)}
-                      className="w-full h-auto min-h-8 justify-start text-left"
-                      size="sm"
-                    >
-                      <span className="truncate">{pattern.name}</span>
-                    </Button>
-                  ))
-                ) : (
-                  <p className="text-center text-xs text-[hsl(215,20.2%,65.1%)] py-4">No patterns created yet.</p>
-                )}
-              </div>
-
-              {selectedPatternId && map.svPatterns[selectedPatternId] && (
-                <div className="shrink-0 space-y-4 border-t border-[hsl(217.2,32.6%,17.5%)] pt-4">
-                  <div>
-                    <Label htmlFor="pattern-name" className="text-xs">
-                      Pattern Name
-                    </Label>
-                    <Input
-                      id="pattern-name"
-                      value={map.svPatterns[selectedPatternId]!.name}
-                      onChange={(e) => handleRenamePattern(selectedPatternId, e.target.value)}
-                      className="h-8 mt-1"
-                    />
-                  </div>
-                  <div className="max-w-24">
-                    <SvEditor
-                      from={map.svPatterns[selectedPatternId]!.from}
-                      to={map.svPatterns[selectedPatternId]!.to}
-                      onChange={(from, to) => handleUpdatePattern(selectedPatternId, from, to)}
-                    />
-                  </div>
-                  <Button onClick={handleAssignPattern} className="w-full">
-                    Assign to Selection
-                  </Button>
-                  <Button onClick={() => handleDeletePattern(selectedPatternId)} variant="destructive" className="w-full">
-                    Delete Pattern
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center text-sm text-[hsl(215,20.2%,65.1%)] m-auto">
-              Select one or more SV notes to configure patterns.
+              <Button onClick={() => handleDeletePattern(selectedPatternId)} variant="destructive" className="w-full">
+                Delete Pattern
+              </Button>
             </div>
           )}
         </aside>
