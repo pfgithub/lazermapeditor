@@ -5,7 +5,7 @@ import { TimingTab } from "@/components/TimingTab";
 import { SettingsTab } from "@/components/SettingsTab";
 import "./index.css";
 import { useEffect, useRef, useState } from "react";
-import { useAppStore } from "./store";
+import { useAppStore, type SvSegment } from "./store";
 import { WaveformDisplay } from "./components/WaveformDisplay";
 import { findNextSnap, findPreviousSnap, type Snap } from "./lib/timingPoints";
 import { AudioController } from "./lib/audio";
@@ -23,6 +23,7 @@ export function App() {
   const { map, song, keybinds, setMap, setSongFile, loadFromDb, isInitialized } = useAppStore();
   const audioControllerRef = useRef<AudioController | null>(null);
   const spaceDownTimeRef = useRef<number | null>(null);
+  const tDownTimeRef = useRef<number | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [isSongLoading, setIsSongLoading] = useState(false);
 
@@ -133,25 +134,56 @@ export function App() {
         e.preventDefault();
         const nextSnap = findNextSnap(map, getCurrentTime(), designSnap);
         if (nextSnap !== null) handleSeek(nextSnap);
+      } else if (e.code === "KeyT") {
+        if (!allowKeyEvent(e)) return;
+        if (activeTab !== "design") return;
+        if (e.repeat) return;
+        e.preventDefault();
+        if (tDownTimeRef.current === null) {
+          tDownTimeRef.current = getCurrentTime();
+        }
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (!keybinds.temporaryPlay.includes(e.code)) return;
-      if (!allowKeyEvent(e)) return;
+      if (keybinds.temporaryPlay.includes(e.code)) {
+        if (!allowKeyEvent(e)) return;
 
-      // If we weren't in a "hold-to-play" state, do nothing.
-      if (spaceDownTimeRef.current === null) {
-        return;
+        // If we weren't in a "hold-to-play" state, do nothing.
+        if (spaceDownTimeRef.current === null) {
+          return;
+        }
+
+        e.preventDefault();
+        const controller = audioControllerRef.current;
+        if (!controller) return;
+
+        controller.pause();
+        controller.seek(spaceDownTimeRef.current);
+        spaceDownTimeRef.current = null;
       }
 
-      e.preventDefault();
-      const controller = audioControllerRef.current;
-      if (!controller) return;
+      if (e.code === "KeyT") {
+        if (!allowKeyEvent(e)) return;
+        if (activeTab !== "design") return;
+        if (tDownTimeRef.current === null) return;
 
-      controller.pause();
-      controller.seek(spaceDownTimeRef.current);
-      spaceDownTimeRef.current = null;
+        e.preventDefault();
+        const startTime = tDownTimeRef.current;
+        const endTime = getCurrentTime();
+        tDownTimeRef.current = null;
+
+        if (endTime > startTime) {
+          const newSvSegment: SvSegment = {
+            startTime,
+            endTime,
+            midTime: startTime + (endTime - startTime) / 2,
+            firstSpeed: 0.5,
+          };
+          const newSvs = [...map.svs, newSvSegment].sort((a, b) => a.startTime - b.startTime);
+          setMap({ ...map, svs: newSvs });
+        }
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -169,7 +201,7 @@ export function App() {
         spaceDownTimeRef.current = null;
       }
     };
-  }, [map, designSnap, keybinds]);
+  }, [map, designSnap, keybinds, activeTab]);
 
   const getCurrentTime = () => audioControllerRef.current?.getCurrentTime() ?? 0;
 

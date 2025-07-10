@@ -8,6 +8,13 @@ export type TimingSegment = {
   bpm: number;
 };
 
+export type SvSegment = {
+  startTime: number;
+  midTime: number;
+  endTime: number;
+  firstSpeed: number;
+};
+
 export type Note = {
   startTime: number;
   endTime: number;
@@ -21,6 +28,7 @@ export type Beatmap = {
   version: string;
   timing: TimingSegment[]; // sorted by start time
   notes: Note[]; // sorted by time
+  svs: SvSegment[]; // sorted by start time
 };
 
 export type Song = {
@@ -58,6 +66,7 @@ const defaultMap: Beatmap = {
   version: "Normal",
   timing: [],
   notes: [],
+  svs: [],
 };
 
 const defaultKeybinds: Keybinds = {
