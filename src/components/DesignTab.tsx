@@ -30,21 +30,6 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
     return Array.from(selectedElements).filter((el) => el.key === "sv");
   }, [selectedElements]);
 
-  useEffect(() => {
-    if (selectedSvNotes.length > 0) {
-      const firstPatternId = selectedSvNotes[0]?.svPattern;
-      const allSame = selectedSvNotes.every((note) => note.svPattern === firstPatternId);
-
-      if (allSame && firstPatternId && map.svPatterns[firstPatternId]) {
-        setSelectedPatternId(firstPatternId);
-      } else {
-        setSelectedPatternId(null);
-      }
-    } else {
-      setSelectedPatternId(null);
-    }
-  }, [selectedSvNotes, map.svPatterns]);
-
   const handleCreatePattern = useCallback(() => {
     const newId = crypto.randomUUID();
     const newPattern: SvPattern = { from: 1.0, to: 1.0 };
@@ -86,7 +71,21 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
         keybinds,
         // Callbacks to update component state
         setMap,
-        onSelectionChange: (els) => setSelectedElements(new Set(els)),
+        onSelectionChange: (els) => {
+          setSelectedElements(new Set(els));
+          let target: string | null | undefined = null;
+          for(const el of els) {
+            if(el.key === "sv") {
+              if(target === null) {
+                target = el.svPattern;
+              }else if(target !== el.svPattern) {
+                target = null;
+                break;
+              }
+            }
+          }
+          setSelectedPatternId(target ?? null);
+        },
       });
     } else {
       controllerRef.current.update({
@@ -272,45 +271,11 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
 
               {selectedPatternId && map.svPatterns[selectedPatternId] && (
                 <div className="shrink-0 space-y-4 border-t border-[hsl(217.2,32.6%,17.5%)] pt-4">
-                  <SvEditor
-                    from={map.svPatterns[selectedPatternId]!.from}
-                    to={map.svPatterns[selectedPatternId]!.to}
-                    onChange={(from, to) => handleUpdatePattern(selectedPatternId, from, to)}
-                  />
-                  <div className="grid gap-2">
-                    <Label htmlFor="from">From</Label>
-                    <Input
-                      id="from"
-                      type="number"
-                      value={map.svPatterns[selectedPatternId]!.from}
-                      onChange={(e) =>
-                        handleUpdatePattern(
-                          selectedPatternId,
-                          parseFloat(e.target.value),
-                          map.svPatterns[selectedPatternId]!.to,
-                        )
-                      }
-                      step="0.01"
-                      min="0"
-                      max="1"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="to">To</Label>
-                    <Input
-                      id="to"
-                      type="number"
-                      value={map.svPatterns[selectedPatternId]!.to}
-                      onChange={(e) =>
-                        handleUpdatePattern(
-                          selectedPatternId,
-                          map.svPatterns[selectedPatternId]!.from,
-                          parseFloat(e.target.value),
-                        )
-                      }
-                      step="0.01"
-                      min="0"
-                      max="1"
+                  <div className="max-w-24">
+                    <SvEditor
+                      from={map.svPatterns[selectedPatternId]!.from}
+                      to={map.svPatterns[selectedPatternId]!.to}
+                      onChange={(from, to) => handleUpdatePattern(selectedPatternId, from, to)}
                     />
                   </div>
                   <Button onClick={handleAssignPattern} className="w-full">

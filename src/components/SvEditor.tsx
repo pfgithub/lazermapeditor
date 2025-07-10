@@ -101,7 +101,11 @@ export function SvEditor({ from, to, onChange, className }: SvEditorProps) {
         const y = moveEvent.clientY - rect.top;
         const newFrom = Math.max(0, Math.min(1, x / rect.width));
         const newTo = Math.max(0, Math.min(1, (rect.height - y) / rect.height));
-        onChange(newFrom, newTo);
+        const roundedFrom = +newFrom.toFixed(2);
+        const roundedTo = +newTo.toFixed(2);
+        const clampedFrom = roundedFrom < 0.01 ? 0.01 : roundedFrom > 0.99 ? 0.99 : roundedFrom;
+        const clampedTo = roundedTo < 0.01 ? 0.01 : roundedTo > 0.99 ? 0.99 : roundedTo;
+        onChange(clampedFrom, clampedTo);
       };
 
       updateValue(e.nativeEvent);
