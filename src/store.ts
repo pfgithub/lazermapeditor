@@ -39,7 +39,8 @@ export type Beatmap = {
 };
 
 export type Song = {
-  url: string;
+  blobUrl: string;
+  blob: Blob,
   name: string;
 };
 
@@ -115,7 +116,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setSongFile: (songFile) => {
     // Revoke old URL to prevent memory leaks
-    const oldUrl = get().song?.url;
+    const oldUrl = get().song?.blobUrl;
     if (oldUrl) {
       URL.revokeObjectURL(oldUrl);
     }
@@ -123,7 +124,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (songFile) {
       set({
         song: {
-          url: URL.createObjectURL(songFile),
+          blobUrl: URL.createObjectURL(songFile),
+          blob: songFile,
           name: songFile.name,
         },
       });

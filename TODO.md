@@ -26,6 +26,7 @@ TODO:
 - [ ] add sv toggle
 - [ ] add fps counter
 - [x] remove findKeyAt, replace it with getKeysInBox
+- [ ] get rid of song.blobUrl, we don't need it
 
 Export:
 

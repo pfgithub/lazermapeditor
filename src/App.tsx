@@ -77,13 +77,13 @@ export function App() {
   // Load song when URL changes
   useEffect(() => {
     const controller = audioControllerRef.current;
-    if (song?.url && controller) {
+    if (song?.blobUrl && controller) {
       setIsSongLoading(true);
       setIsPlaying(false);
       setDuration(0);
       setAudioBuffer(null);
       controller
-        .load(song.url)
+        .load(song.blobUrl)
         .catch((err) => {
           console.error("Failed to load audio", err);
           // TODO: show an error to the user
@@ -95,14 +95,14 @@ export function App() {
       setAudioBuffer(null);
       setDuration(0);
     }
-  }, [song?.url]);
+  }, [song?.blobUrl]);
 
   // Global cleanup for blob URL on app close/refresh
   useEffect(() => {
     const handleBeforeUnload = () => {
       const currentSong = useAppStore.getState().song;
-      if (currentSong?.url) {
-        URL.revokeObjectURL(currentSong.url);
+      if (currentSong?.blobUrl) {
+        URL.revokeObjectURL(currentSong.blobUrl);
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -240,7 +240,7 @@ export function App() {
           />
         </TabsContent>
         <TabsContent value="timing" className="flex-grow min-h-0 m-0">
-          <TimingTab map={map} setMap={setMap} getCurrentTime={getCurrentTime} songUrl={song?.url ?? null} />
+          <TimingTab map={map} setMap={setMap} getCurrentTime={getCurrentTime} songUrl={song?.blobUrl ?? null} />
         </TabsContent>
         <TabsContent value="settings" className="flex-grow min-h-0 m-0">
           <SettingsTab />
@@ -258,7 +258,7 @@ export function App() {
             seek={handleSeek}
           />
         </div>
-        {song?.url ? (
+        {song?.blobUrl ? (
           <div className="flex items-center gap-4 bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] p-3 rounded-lg h-[60px]">
             <Button
               onClick={() => {
