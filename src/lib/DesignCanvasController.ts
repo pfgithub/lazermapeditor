@@ -509,7 +509,7 @@ export class DesignCanvasController {
     if (endTime == null) return;
 
     const newKey: Note = {
-      startTime,
+      startTime: Math.min(startTime, endTime),
       endTime: Math.max(startTime, endTime),
       key: keyIndex,
     };
