@@ -32,3 +32,22 @@ Export:
 Features:
 
 - [ ] sv mapping that preserves relative note position
+  - check https://zardoru.github.io/sv-tools/
+  - in editor we want to define an sv section between two notes:
+  - this is just an easing function
+  - default is linear
+  - then we have to render it out to a few sv timing points
+  - and then we have to update those timing points based on bpm which is ??????? idk even
+    - let's not worry about that for now
+  - how will we preview sv in editor?
+    - ig it's a function (time) => (new_time)
+    - and then we put an error if an sv segment overlaps
+
+```
+export type SvSegment = {
+  startTime: number;
+  midTime: number;
+  endTime: number;
+  firstSpeed: number;
+};
+```
