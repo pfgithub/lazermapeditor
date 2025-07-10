@@ -62,8 +62,8 @@ const defaultMap: Beatmap = {
 
 const defaultKeybinds: Keybinds = {
   temporaryPlay: ["Space"],
-  seekBackward: ["KeyA"],
-  seekForward: ["Semicolon"],
+  seekBackward: ["KeyA", "KeyL"],
+  seekForward: ["KeyS", "Semicolon"],
   deleteSelection: ["Delete", "Backspace"],
   placeNoteLane1: ["KeyD"],
   placeNoteLane2: ["KeyF"],
