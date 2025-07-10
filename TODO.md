@@ -48,6 +48,8 @@ export type SvSegment = {
   startTime: number;
   midTime: number;
   endTime: number;
-  firstSpeed: number;
+
+  duration: number; // between zero and one
+  firstChange: number;
 };
 ```
