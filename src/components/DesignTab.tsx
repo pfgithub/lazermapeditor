@@ -1,9 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useAppStore, type Note, type Beatmap } from "@/store";
 import { findNextSnap, findPreviousSnap, snapLevels, type Snap } from "@/lib/timingPoints";
 import { DesignCanvasController } from "@/lib/DesignCanvasController";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface DesignTabProps {
   map: Beatmap;
@@ -20,6 +27,12 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   const controllerRef = useRef<DesignCanvasController | null>(null);
   const [selectionCount, setSelectionCount] = useState(0);
   const keybinds = useAppStore((s) => s.keybinds);
+
+  // Memoize the current SV segment to avoid re-calculating on every render
+  const currentSV = useMemo(() => {
+    const time = getCurrentTime();
+    return map.svs.find((sv) => time >= sv.startTime && time < sv.endTime);
+  }, [getCurrentTime, map.svs]);
 
   // Initialize and update canvas controller
   useEffect(() => {
@@ -120,11 +133,11 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
     let nextTime: number | null = null;
 
     if (e.deltaY < 0) {
-      // Scroll down -> forward in time
-      nextTime = findNextSnap(map, getCurrentTime(), snap);
-    } else {
       // Scroll up -> backward in time
       nextTime = findPreviousSnap(map, getCurrentTime(), snap);
+    } else {
+      // Scroll down -> forward in time
+      nextTime = findNextSnap(map, getCurrentTime(), snap);
     }
 
     if (nextTime !== null) {
@@ -145,20 +158,40 @@ export function DesignTab({ map, setMap, getCurrentTime, seek, snap, setSnap }: 
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="flex items-center justify-between p-3 bg-[hsl(224,71%,4%)] border border-[hsl(217.2,32.6%,17.5%)] rounded-lg shrink-0">
-        <div className="flex items-center gap-2">
-          <Label>Snap:</Label>
-          {snapLevels.map((level) => (
-            <Button key={level} variant={snap === level ? "default" : "outline"} size="sm" onClick={() => setSnap(level)}>
-              1/{level}
-            </Button>
-          ))}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label>Snap:</Label>
+            {snapLevels.map((level) => (
+              <Button key={level} variant={snap === level ? "default" : "outline"} size="sm" onClick={() => setSnap(level)}>
+                1/{level}
+              </Button>
+            ))}
+          </div>
+          {currentSV && (
+            <div className="flex items-center gap-2 border-l border-[hsl(217.2,32.6%,17.5%)] pl-4">
+              <Label htmlFor="sv-pattern">SV Pattern:</Label>
+              <Select
+                value={currentSV.pattern}
+                onValueChange={(newPatternId) => {
+                  const newSvs = map.svs.map((sv) => (sv.startTime === currentSV.startTime ? { ...sv, pattern: newPatternId } : sv));
+                  setMap({ ...map, svs: newSvs });
+                }}
+              >
+                <SelectTrigger id="sv-pattern" className="w-[150px] h-8">
+                  <SelectValue placeholder="Select pattern" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(map.svPatterns).map((patternId) => (
+                    <SelectItem key={patternId} value={patternId}>
+                      Pattern #{patternId}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
-        <Button
-          onClick={() => controllerRef.current?.flipHorizontal()}
-          variant="outline"
-          size="sm"
-          disabled={selectionCount === 0}
-        >
+        <Button onClick={() => controllerRef.current?.flipHorizontal()} variant="outline" size="sm" disabled={selectionCount === 0}>
           Flip Horizontal
         </Button>
       </div>

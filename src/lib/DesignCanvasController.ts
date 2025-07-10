@@ -102,14 +102,19 @@ export class DesignCanvasController {
 
   private generateKeyMap(keybinds: Keybinds): { [code: string]: KeyMapEntry } {
     const keyMap: { [code: string]: KeyMapEntry } = {};
-    const actions: KeybindAction[] = ["placeNoteLane1", "placeNoteLane2", "placeNoteLane3", "placeNoteLane4"];
+    const actions: KeybindAction[] = [
+      "placeNoteLane1",
+      "placeNoteLane2",
+      "placeNoteLane3",
+      "placeNoteLane4",
+    ];
     actions.forEach((action, index) => {
       (keybinds[action] || []).forEach((key) => {
         if (key) keyMap[key] = index as KeyMapEntry;
       });
     });
-    for(const k of keybinds["placeSV"] ?? []) {
-      if(k) keyMap[k] = "sv";
+    for (const k of keybinds["placeSV"] ?? []) {
+      if (k) keyMap[k] = "sv";
     }
     return keyMap;
   }
@@ -512,21 +517,19 @@ export class DesignCanvasController {
     const endTime = findNearestSnap(this.map, this.getCurrentTime(), this.snap);
     if (endTime == null) return;
 
-    if(keyIndex === "sv") {
+    if (keyIndex === "sv") {
       const newSv: SvSegment = {
         startTime: Math.min(startTime, endTime),
         endTime: Math.max(startTime, endTime),
-        pattern: "0",
+        pattern: "0", // Default pattern
       };
-      const existingSv = this.map.svs.find(
-        (k) => k.startTime === newSv.startTime,
-      );
-      if(existingSv) {
-        const newSvs = this.map.svs.filter(sv => sv !== existingSv);
+      const existingSv = this.map.svs.find((k) => k.startTime === newSv.startTime);
+      if (existingSv) {
+        const newSvs = this.map.svs.filter((sv) => sv !== existingSv);
         this.setMap({ ...this.map, svs: newSvs });
         return;
       }
-      if(startTime === endTime) return; // no zero-length SVs
+      if (startTime === endTime) return; // no zero-length SVs
       const newSvs = [...this.map.svs, newSv].sort((a, b) => a.startTime - b.startTime);
       this.setMap({ ...this.map, svs: newSvs });
       return;
@@ -544,7 +547,7 @@ export class DesignCanvasController {
 
     if (existingNote) {
       // Note exists, delete it.
-      const newKeys = this.map.notes.filter(note => note !== existingNote);
+      const newKeys = this.map.notes.filter((note) => note !== existingNote);
       this.setMap({ ...this.map, notes: newKeys });
     } else {
       // Note does not exist, add it.
@@ -590,6 +593,47 @@ export class DesignCanvasController {
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
       ctx.stroke();
+    }
+
+    // --- Draw SVs ---
+    for (const sv of this.map.svs) {
+      if (sv.endTime < viewStartTime || sv.startTime > viewEndTime) continue;
+      // Default to linear if pattern is missing
+      const pattern = this.map.svPatterns[sv.pattern] ?? { from: 0.5, to: 0.5 };
+
+      const y_start = this.posToY(sv.startTime);
+      const y_end = this.posToY(sv.endTime);
+
+      const grad = ctx.createLinearGradient(0, y_start, 0, y_end);
+      // Simple blue-to-red gradient for slow-to-fast
+      const startSpeed = pattern.to / pattern.from;
+      const endSpeed = (1 - pattern.to) / (1 - pattern.from);
+
+      const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+      const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(val, max));
+
+      // Color based on speed multiplier (1x = white)
+      const speedToColor = (speed: number) => {
+        if (speed < 1) {
+          // Blue for slower
+          const t = clamp(speed, 0.25, 1);
+          return `hsl(240, 100%, ${lerp(100, 75, t)}%)`;
+        } else {
+          // Red for faster
+          const t = clamp((speed - 1) / 3, 0, 1); // up to 4x
+          return `hsl(0, 100%, ${lerp(75, 50, t)}%)`;
+        }
+      };
+
+      grad.addColorStop(0, speedToColor(startSpeed));
+      grad.addColorStop(1, speedToColor(endSpeed));
+      ctx.fillStyle = grad;
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect(0, y_end, 10, y_start - y_end);
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = "hsl(0, 0%, 50%)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0, y_end, 10, y_start - y_end);
     }
 
     const drawKey = (key: Note, isSelected: boolean) => {
@@ -642,32 +686,16 @@ export class DesignCanvasController {
 
     // --- Draw in-progress notes ---
     for (const [lane, startTime] of this.activeHolds.entries()) {
-      drawKey({
-        startTime,
-        endTime: findNearestSnap(this.map, time, this.snap) ?? time,
-        key: +lane as Note["key"],
-      }, false);
-    }
-
-    // --- Draw SVs ---
-    for (const sv of this.map.svs) {
-      if (sv.endTime < viewStartTime || sv.startTime > viewEndTime) continue;
-
-      const pattern = this.map.svPatterns[sv.pattern ?? ""] ?? {from: 0.9, to: 0.1};
-
-      const y_start = this.posToY(sv.startTime);
-      const y_mid = this.posToY(sv.startTime + (sv.endTime - sv.startTime) * pattern.from);
-      const y_end = this.posToY(sv.endTime);
-
-      const c = 7;
-      const c_before = c * pattern.to;
-      const c_after = c * (1 - pattern.to);
-
-      // Hold Note
-      ctx.fillStyle = "#AAA";
-      ctx.fillRect(0, y_end, c_before, y_mid - y_end);
-      ctx.fillStyle = "#FFF";
-      ctx.fillRect(0, y_mid, c_after, y_start - y_mid);
+      if (typeof lane === "number") {
+        drawKey(
+          {
+            startTime,
+            endTime: findNearestSnap(this.map, time, this.snap) ?? time,
+            key: lane as Note["key"],
+          },
+          false,
+        );
+      }
     }
 
     // --- Draw Dragged Keys Preview ---
