@@ -125,14 +125,16 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
               }
             }
           }
-          setSelectedPatternId(target ?? null);
+          if (target !== null) setSelectedPatternId(target ?? null);
         },
+        selectedPatternId,
       });
     } else {
       controllerRef.current.update({
         map,
         snap,
         keybinds,
+        selectedPatternId,
       });
     }
   }); // Runs on every render to keep controller props in sync
@@ -328,8 +330,8 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
                   onChange={(from, to) => handleUpdatePattern(selectedPatternId, from, to)}
                 />
               </div>
-              <Button onClick={handleAssignPattern} className="w-full">
-                Assign to Selection
+              <Button onClick={handleAssignPattern} className="w-full" disabled={selectedSvNotes.length === 0}>
+                Assign to Selection ({selectedSvNotes.length})
               </Button>
               <Button onClick={() => handleDeletePattern(selectedPatternId)} variant="destructive" className="w-full">
                 Delete Pattern

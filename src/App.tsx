@@ -188,11 +188,13 @@ export function App() {
       if(sv.key !== "sv") continue;
       if(current >= sv.startTime && current < sv.endTime) {
         // modify
-        const pattern = map.svPatterns[sv.svPattern ?? ""] ?? {from: 0.9, to: 0.1};
-        const before = (current - sv.startTime) / (sv.endTime - sv.startTime);
-        const after = svRemap(before, pattern.from, pattern.to);
-        current = after * (sv.endTime - sv.startTime) + sv.startTime;
-        break;
+        const pattern = map.svPatterns[sv.svPattern ?? ""];
+        if (pattern) {
+          const before = (current - sv.startTime) / (sv.endTime - sv.startTime);
+          const after = svRemap(before, pattern.from, pattern.to);
+          current = after * (sv.endTime - sv.startTime) + sv.startTime;
+          break;
+        }
       }
     }
     return current;

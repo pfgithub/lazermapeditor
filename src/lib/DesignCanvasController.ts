@@ -40,6 +40,7 @@ export interface DesignCanvasControllerOptions {
   keybinds: Keybinds;
   setMap: (map: Beatmap) => void;
   onSelectionChange?: (sel: Set<MapElement>) => void;
+  selectedPatternId: string | null;
 }
 
 const themeColors = {
@@ -65,6 +66,7 @@ export class DesignCanvasController {
   activeHolds: Map<MapElementKey, number> = new Map();
   selectedElements: Set<MapElement> = new Set();
   selectionBox: { x1: number; t1: number; x2: number; t2: number } | null = null;
+  selectedPatternId: string | null;
 
   constructor(options: DesignCanvasControllerOptions) {
     this.canvas = options.canvas;
@@ -82,15 +84,16 @@ export class DesignCanvasController {
 
     this.setMap = options.setMap;
     this.onSelectionChange = options.onSelectionChange ?? (() => {});
+    this.selectedPatternId = options.selectedPatternId;
   }
 
   public update(
-    options: Partial<
+    options: 
       Omit<
         DesignCanvasControllerOptions,
         "canvas" | "getCurrentTime" | "setMap" | "onSelectionChange"
       >
-    >,
+    ,
   ) {
     if (options.keybinds && options.keybinds !== this.keybinds) {
       this.keybinds = options.keybinds;
@@ -98,6 +101,7 @@ export class DesignCanvasController {
     }
     if (options.map) this.map = options.map;
     if (options.snap) this.snap = options.snap;
+    this.selectedPatternId = options.selectedPatternId;
   }
 
   private generateKeyMap(keybinds: Keybinds): { [code: string]: MapElementKey } {
@@ -545,6 +549,9 @@ export class DesignCanvasController {
         if (newEndTime == null) return;
         newKey.endTime = newEndTime;
       }
+      if (newKey.key === "sv") {
+        newKey.svPattern = this.selectedPatternId ?? undefined;
+      }
       const newKeys = [...this.map.notes, newKey].sort((a, b) => a.startTime - b.startTime);
       this.setMap({ ...this.map, notes: newKeys });
     }
@@ -590,7 +597,9 @@ export class DesignCanvasController {
     }
 
     const drawSv = (sv: MapElement, isSelected: boolean) => {
-      const pattern = this.map.svPatterns[sv.svPattern ?? ""] ?? {from: 0.9, to: 0.1};
+      let pattern: {from: number, to: number} = this.map.svPatterns[sv.svPattern ?? ""];
+      const hasPattern = !!pattern;
+      pattern ??= {from: 0.5, to: 0.5}; 
 
       const y_start = this.posToY(sv.startTime);
       const y_mid = this.posToY(sv.startTime + (sv.endTime - sv.startTime) * pattern.to);
