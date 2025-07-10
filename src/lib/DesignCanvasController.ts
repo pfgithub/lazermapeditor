@@ -131,40 +131,6 @@ export class DesignCanvasController {
     return lineTime;
   }
 
-  public findKeyAt(x: number, y: number): MapElement | null {
-    const rect = this.canvas.getBoundingClientRect();
-    const numLanes = 4;
-    const laneWidth = rect.width / numLanes;
-    const lane = Math.floor(x / laneWidth);
-    const viewStartTime = this.getCurrentTime() - 0.1;
-    const viewEndTime = this.getCurrentTime() + 1.0;
-    let clickedKey: MapElement | null = null;
-    let minDistance = Infinity;
-
-    for (const key of this.map.notes) {
-      if (key.key !== lane) continue;
-      if (key.endTime < viewStartTime || key.startTime > viewEndTime) continue;
-
-      const y_start = this.posToY(key.startTime);
-      const y_end = this.posToY(key.endTime);
-
-      const isTap = key.startTime === key.endTime;
-      const isYInRange = isTap
-        ? y >= y_start - 5 && y <= y_start + 5
-        : y >= y_end && y <= y_start;
-
-      if (isYInRange) {
-        const y_center = isTap ? y_start : (y_start + y_end) / 2;
-        const distance = Math.abs(y - y_center);
-        if (distance < minDistance) {
-          minDistance = distance;
-          clickedKey = key;
-        }
-      }
-    }
-    return clickedKey;
-  }
-
   public getKeysInBox(x1: number, t1: number, x2: number, t2: number): MapElement[] {
     const y1 = this.posToY(t1);
     const y2 = this.posToY(t2);
@@ -208,8 +174,10 @@ export class DesignCanvasController {
     const y = e.clientY - rect.top;
     const numLanes = 4;
     const laneWidth = rect.width / numLanes;
+    const yTime = this.yToPos(y);
 
-    const clickedKey = this.findKeyAt(x, y);
+    const clickedKeys = this.getKeysInBox(x, yTime, x, yTime);
+    const clickedKey = clickedKeys[0];
     const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
 
     if (clickedKey) {
