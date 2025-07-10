@@ -1,4 +1,5 @@
 import type { Beatmap, Song } from "@/store";
+import JSZip from "jszip";
 
 /**
  * Generates the content for a .osu file from the application's state.
@@ -91,6 +92,7 @@ export function exportToOsuFile(map: Beatmap, song: Song | null): string {
   map.notes
     .sort((a, b) => a.startTime - b.startTime)
     .forEach((note) => {
+      if (typeof note.key !== "number") return;
       const x = getX(note.key);
       const time = Math.round(note.startTime * 1000);
       const hitSample = "0:0:0:0:";
@@ -112,4 +114,33 @@ export function exportToOsuFile(map: Beatmap, song: Song | null): string {
   lines.push("");
 
   return lines.join("\r\n");
+}
+
+/**
+ * Generates a .osz file (a zip archive) containing the .osu file and song.
+ * @param map - The beatmap data.
+ * @param song - The song data.
+ * @returns A promise that resolves with a Blob of the .osz file.
+ */
+export async function exportToOszFile(map: Beatmap, song: Song): Promise<Blob> {
+  const osuFileContent = exportToOsuFile(map, song);
+
+  const songFileResponse = await fetch(song.url);
+  const songFileBlob = await songFileResponse.blob();
+
+  const zip = new JSZip();
+
+  const sanitizeFilename = (name: string) => name.replace(/[<>:"/\\|?*]/g, "").trim() || "undefined";
+  const artist = sanitizeFilename(map.artist);
+  const title = sanitizeFilename(map.title);
+  const creator = sanitizeFilename(map.creator);
+  const version = `[${sanitizeFilename(map.version)}]`;
+
+  const osuFilename = `${artist} - ${title} (${creator}) ${version}.osu`;
+
+  zip.file(osuFilename, osuFileContent);
+  zip.file(song.name, songFileBlob);
+
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  return zipBlob;
 }

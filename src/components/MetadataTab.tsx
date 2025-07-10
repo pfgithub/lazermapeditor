@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Beatmap, Song } from "@/store";
-import { exportToOsuFile } from "@/lib/export";
+import { exportToOszFile } from "@/lib/export";
 
 interface MetadataTabProps {
   map: Beatmap;
@@ -30,11 +30,8 @@ export function MetadataTab({ map, setMap, song, setSong }: MetadataTabProps) {
     setMap({ ...map, [field]: value });
   };
 
-  const handleExport = () => {
-    const osuFileContent = exportToOsuFile(map, song);
-    const blob = new Blob([osuFileContent], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+  const handleExport = async () => {
+    if (!song) return;
 
     const sanitizeFilename = (name: string) => name.replace(/[<>:"/\\|?*]/g, "").trim() || "undefined";
 
@@ -42,8 +39,12 @@ export function MetadataTab({ map, setMap, song, setSong }: MetadataTabProps) {
     const title = sanitizeFilename(map.title);
     const creator = sanitizeFilename(map.creator);
     const version = `[${sanitizeFilename(map.version)}]`;
-    const filename = `${artist} - ${title} (${creator}) ${version}.osu`;
+    const filename = `${artist} - ${title} (${creator}) ${version}.osz`;
 
+    const blob = await exportToOszFile(map, song);
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
     link.href = url;
     link.download = filename;
     document.body.appendChild(link);
@@ -114,7 +115,7 @@ export function MetadataTab({ map, setMap, song, setSong }: MetadataTabProps) {
           <h2 className="text-lg font-semibold border-b border-[hsl(217.2,32.6%,17.5%)] pb-2 mb-4">Actions</h2>
           <div className="flex justify-end">
             <Button type="button" onClick={handleExport} disabled={!song}>
-              Export to .osu file
+              Export to .osz file
             </Button>
           </div>
         </div>
