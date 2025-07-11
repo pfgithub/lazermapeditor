@@ -33,6 +33,7 @@ TODO:
 - [ ] save/load project file
 - [ ] import .osz file
 - [x] make sure sv editor reflects game's ratio limitations
+- [ ] switch sv mapping to be bpm-based to remove the speed limits
 
 Export:
 
