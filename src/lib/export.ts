@@ -127,7 +127,7 @@ export async function exportToOszFile(map: Beatmap, song: Song): Promise<Blob> {
   try {
     const osuFileContent = exportToOsuFile(map, song);
 
-    const songFileBlob = song.blob;
+    const songFileBytes = await song.blob.bytes();
 
     const zip = new JSZip();
 
@@ -140,7 +140,7 @@ export async function exportToOszFile(map: Beatmap, song: Song): Promise<Blob> {
     const osuFilename = `${artist} - ${title} (${creator}) ${version}.osu`;
 
     zip.file(osuFilename, osuFileContent);
-    zip.file(song.name, songFileBlob);
+    zip.file(song.name, songFileBytes);
 
     const zipBlob = await zip.generateAsync({ type: "blob" });
     return zipBlob;
