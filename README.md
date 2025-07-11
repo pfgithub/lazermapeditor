@@ -29,3 +29,4 @@ And eventually:
 - Missing "Move already placed objects when changing timing"
 - Missing difficulty settings, source, mapper tags, romanised artist, romanised title, background, design settings
 - Can't import an existing map
+- Performance gets worse with more notes (This will be resolved once the binary search is implemented)
