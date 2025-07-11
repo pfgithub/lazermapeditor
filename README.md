@@ -7,18 +7,15 @@ A new editor for 4k osu!mania maps
 ## Why?
 
 - Faster note input: Press 'DF/JK' to place notes, hold for hold notes, use 'A/S' to go forwards/back in time
-- BPM SV normalization (TODO: this is not implemented yet)
 - SV mapping in-editor that preserves the relative positioning of notes
 - Hold space to play, when you release it goes back to the start
-
-And eventually:
-
-- BPM SV normalization (TODO: this is not implemented yet)
+- (Not implemented yet): it will auto-normalize speed if there are multiple BPMs in the map
 
 ## Features
 
 - Basic timing, place notes & hold notes, box-select, drag notes, copy/paste
 - Export .osz
+
 
 ## Limitations
 
