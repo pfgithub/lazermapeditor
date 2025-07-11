@@ -1,4 +1,4 @@
-# una!map · a 4k osu!mania map editor
+# una!map · a 4k osu!mania map maker
 
 A new editor for 4k osu!mania maps
 
