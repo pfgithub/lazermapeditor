@@ -1,6 +1,6 @@
 import type { Song } from "./store";
 
-const DB_NAME = "rhythm-editor-db";
+const DB_NAME = "unamap-db";
 const DB_VERSION = 2;
 const MAP_STORE_NAME = "map";
 const SONG_STORE_NAME = "song";
