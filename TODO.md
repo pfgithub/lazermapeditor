@@ -1,6 +1,7 @@
 Bun bug!
 
 - [ ] bun 1.2.8 windows 2ae7a1358e894f6b818a4cbff62f5eb731ef883f : `bun serve` Non-sourcemapped error (Choose an audio file)
+- [ ] 4fca94759f54014b27700eca12e7d321d37dcd98 export button: frontend NotFoundError: Node was not found (no stacktrace?)
 
 TODO:
 
