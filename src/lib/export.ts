@@ -105,7 +105,7 @@ export function exportToOsuFile(map: Beatmap, song: Song | null): string {
         lines.push(`${x},192,${time},${type},0,${hitSample}`);
       } else {
         // Hold Note
-        const type = 128 | 1; // Bit 7 for hold + Bit 0 for circle
+        const type = 128; // Bit 7 for hold
         const endTime = Math.round(note.endTime * 1000);
         const objectParams = `${endTime}:${hitSample}`;
         // x,y,time,type,hitSound,objectParams
