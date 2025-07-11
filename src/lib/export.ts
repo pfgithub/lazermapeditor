@@ -119,7 +119,7 @@ export function exportToOsuFile(map: Beatmap, song: Song | null): string {
     finalTimingPoints.push([midTime, -100 * (1 / calc.endRatio), 0, 2, 0, 100, 0, 0]);
     finalTimingPoints.push([endTime, -100, 0, 2, 0, 100, 0, 0]);
   }
-  finalTimingPoints.sort((a, b) => a[0] - b[0]);
+  finalTimingPoints.sort((a, b) => a - b);
   for(const result of finalTimingPoints) {
     lines.push(result.join(","));
   }
@@ -182,4 +182,54 @@ export async function exportToOszFile(map: Beatmap, song: Song): Promise<Blob> {
 
     const zipBlob = await zip.generateAsync({ type: "blob" });
     return zipBlob;
+}
+
+/**
+ * Generates a .unamap file (a zip archive) containing the map data and song.
+ * @param map - The beatmap data.
+ * @param song - The song data.
+ * @returns A promise that resolves with a Blob of the .unamap file.
+ */
+export async function exportToUnamap(map: Beatmap, song: Song | null): Promise<Blob> {
+  const zip = new JSZip();
+
+  const mapJson = JSON.stringify(map, null, 2);
+  zip.file("map.json", mapJson);
+
+  if (song) {
+    zip.file(song.name, song.bytes);
+  }
+
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  return zipBlob;
+}
+
+type LoadedProject = {
+  map: Beatmap;
+  songFile: File | null;
+};
+
+/**
+ * Loads a project from a .unamap file.
+ * @param file - The .unamap file.
+ * @returns A promise that resolves with the loaded map and song file.
+ */
+export async function loadFromUnamap(file: File): Promise<LoadedProject> {
+  const zip = await JSZip.loadAsync(file);
+
+  const mapFile = zip.file("map.json");
+  if (!mapFile) {
+    throw new Error("Invalid .unamap file: map.json not found.");
+  }
+  const mapJson = await mapFile.async("string");
+  const map: Beatmap = JSON.parse(mapJson);
+
+  const audioFile = zip.file(/\.(mp3|ogg|wav)$/i);
+  let songFile: File | null = null;
+  if (audioFile) {
+    const songBytes = await audioFile.async("blob");
+    songFile = new File([songBytes], audioFile.name, { type: songBytes.type });
+  }
+
+  return { map, songFile };
 }

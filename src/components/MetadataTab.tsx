@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { defaultMap, type Beatmap, type Song } from "@/store";
-import { exportToOszFile } from "@/lib/export";
+import { exportToOszFile, exportToUnamap, loadFromUnamap } from "@/lib/export";
 
 interface MetadataTabProps {
   map: Beatmap;
@@ -15,9 +15,10 @@ interface MetadataTabProps {
 export function MetadataTab({ map, setMap, song, setSong }: MetadataTabProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const songInputRef = useRef<HTMLInputElement>(null);
+  const loadProjectInputRef = useRef<HTMLInputElement>(null);
 
   const handleSongChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files?.;
     if (file) {
       setSong(file);
     }
@@ -28,6 +29,47 @@ export function MetadataTab({ map, setMap, song, setSong }: MetadataTabProps) {
     value: string,
   ) => {
     setMap({ ...map, [field]: value });
+  };
+
+  const handleSaveProject = async () => {
+    try {
+      const blob = await exportToUnamap(map, song);
+      const sanitizeFilename = (name: string) => name.replace(/[<>:"/\\|?*]/g, "").trim() || "untitled";
+      const filename = `${sanitizeFilename(map.artist)} - ${sanitizeFilename(map.title)}.unamap`;
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Error saving project! " + (e as Error).toString());
+      console.error(e);
+    }
+  };
+
+  const handleLoadProject = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.;
+    if (!file) return;
+
+    try {
+      if (confirm("Loading a project will overwrite your current unsaved changes. Continue?")) {
+        const { map: loadedMap, songFile: loadedSongFile } = await loadFromUnamap(file);
+        setMap(loadedMap);
+        setSong(loadedSongFile);
+      }
+    } catch (err) {
+      alert("Failed to load project: " + (err as Error).message);
+      console.error(err);
+    } finally {
+      // Reset the input so the same file can be loaded again
+      if (e.target) {
+        e.target.value = "";
+      }
+    }
   };
 
   const handleExport = async () => {
@@ -119,6 +161,15 @@ export function MetadataTab({ map, setMap, song, setSong }: MetadataTabProps) {
         <div>
           <h2 className="text-lg font-semibold border-b border-[hsl(217.2,32.6%,17.5%)] pb-2 mb-4">Actions</h2>
           <div className="flex flex-col gap-2">
+            <div className="flex justify-end gap-2">
+                <Button type="button" onClick={() => loadProjectInputRef.current?.click()}>
+                    Load Project
+                </Button>
+                <input type="file" accept=".unamap" ref={loadProjectInputRef} className="hidden" onChange={handleLoadProject} />
+                <Button type="button" onClick={handleSaveProject}>
+                    Save Project
+                </Button>
+            </div>
             <div className="flex justify-end">
               <Button type="button" onClick={handleExport} disabled={!song}>
                 Export to .osz file
