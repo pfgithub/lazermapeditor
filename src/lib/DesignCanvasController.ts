@@ -30,6 +30,7 @@ type ClipboardNote = {
   relativeStartTime: number;
   relativeEndTime: number;
   key: MapElementKey;
+  svPattern?: string;
 };
 
 export interface DesignCanvasControllerOptions {
@@ -359,6 +360,7 @@ export class DesignCanvasController {
       key: note.key,
       relativeStartTime: note.startTime - baseTime,
       relativeEndTime: note.endTime - baseTime,
+      svPattern: note.svPattern,
     }));
 
     try {
@@ -386,7 +388,6 @@ export class DesignCanvasController {
       for (const clipboardNote of clipboardNotes) {
         // More validation
         if (
-          typeof clipboardNote.key !== "number" ||
           ![0, 1, 2, 3, "sv"].includes(clipboardNote.key) ||
           typeof clipboardNote.relativeStartTime !== "number" ||
           typeof clipboardNote.relativeEndTime !== "number"
@@ -399,6 +400,7 @@ export class DesignCanvasController {
           key: clipboardNote.key as MapElement["key"],
           startTime: pasteTime + clipboardNote.relativeStartTime,
           endTime: pasteTime + clipboardNote.relativeEndTime,
+          svPattern: this.map.svPatterns[clipboardNote.svPattern ?? ""] ? clipboardNote.svPattern : undefined,
         };
         newNotes.push(newNote);
       }
