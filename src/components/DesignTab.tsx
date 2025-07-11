@@ -323,13 +323,11 @@ export function DesignTab({ map, setMap, getTrueCurrentTime, getCurrentTime, see
                   className="h-8 mt-1"
                 />
               </div>
-              <div className="max-w-24">
-                <SvEditor
-                  from={map.svPatterns[selectedPatternId]!.from}
-                  to={map.svPatterns[selectedPatternId]!.to}
-                  onChange={(from, to) => handleUpdatePattern(selectedPatternId, from, to)}
-                />
-              </div>
+              <SvEditor
+                from={map.svPatterns[selectedPatternId]!.from}
+                to={map.svPatterns[selectedPatternId]!.to}
+                onChange={(from, to) => handleUpdatePattern(selectedPatternId, from, to)}
+              />
               <Button onClick={handleAssignPattern} className="w-full" disabled={selectedSvNotes.length === 0}>
                 Assign to Selection ({selectedSvNotes.length})
               </Button>

@@ -387,7 +387,7 @@ export class DesignCanvasController {
         // More validation
         if (
           typeof clipboardNote.key !== "number" ||
-          ![0, 1, 2, 3].includes(clipboardNote.key) ||
+          ![0, 1, 2, 3, "sv"].includes(clipboardNote.key) ||
           typeof clipboardNote.relativeStartTime !== "number" ||
           typeof clipboardNote.relativeEndTime !== "number"
         ) {

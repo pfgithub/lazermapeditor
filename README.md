@@ -1,21 +1,29 @@
-# bun-react-tailwind-shadcn-template
+# osu!mania 4k map editor
 
-To install dependencies:
+A new editor for 4k osu!mania maps
 
-```bash
-bun install
-```
+## Why?
 
-To start a development server:
+- Faster note input: Press 'DF/JK' to place notes, hold for hold notes, use 'A/S' to go forwards/back in time
+- BPM SV normalization (TODO: this is not implemented yet)
+- SV mapping in-editor that preserves the relative positioning of notes
+- Hold space to play, when you release it goes back to the start
 
-```bash
-bun dev
-```
+And eventually:
 
-To run for production:
+- BPM SV normalization (TODO: this is not implemented yet)
 
-```bash
-bun start
-```
+## Features
 
-This project was created using `bun init` in bun v1.2.16. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+- Basic timing, place notes & hold notes, box-select, drag notes, copy/paste
+- Export .osz
+
+## Limitations
+
+- Missing undo/redo
+- Missing save/load from file
+- Missing note volume, sample, bank, addition bank
+- Timing tab is not very good: missing that line thing you can hover over that shows the match, missing tap beat, missing easy offset/bpm adjustment buttons, missing time signature, missing skip bar line, missing kiai time
+- Missing "Move already placed objects when changing timing"
+- Missing difficulty settings, source, mapper tags, romanised artist, romanised title, background, design settings
+- Can't import an existing map

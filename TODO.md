@@ -28,6 +28,11 @@ TODO:
 - [ ] add fps counter
 - [x] remove findKeyAt, replace it with getKeysInBox
 - [ ] get rid of song.blobUrl, we don't need it
+- [x] fix sv calculations in export.ts
+- [ ] edit multiple difficulties
+- [ ] save/load project file
+- [ ] import .osz file
+- [x] make sure sv editor reflects game's ratio limitations
 
 Export:
 

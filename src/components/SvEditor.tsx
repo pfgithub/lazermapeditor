@@ -3,7 +3,7 @@
  * Renders a draggable point on a 2D plane to control the shape of an SV curve.
  */
 import React, { useRef, useEffect, useCallback } from "react";
-import { cn } from "@/lib/utils";
+import { cn, svCalculate } from "@/lib/utils";
 
 interface SvEditorProps {
   from: number;
@@ -101,11 +101,7 @@ export function SvEditor({ from, to, onChange, className }: SvEditorProps) {
         const y = moveEvent.clientY - rect.top;
         const newFrom = Math.max(0, Math.min(1, x / rect.width));
         const newTo = Math.max(0, Math.min(1, (rect.height - y) / rect.height));
-        const roundedFrom = +newFrom.toFixed(2);
-        const roundedTo = +newTo.toFixed(2);
-        const clampedFrom = roundedFrom < 0.01 ? 0.01 : roundedFrom > 0.99 ? 0.99 : roundedFrom;
-        const clampedTo = roundedTo < 0.01 ? 0.01 : roundedTo > 0.99 ? 0.99 : roundedTo;
-        onChange(clampedFrom, clampedTo);
+        onChange(newFrom, newTo);
       };
 
       updateValue(e.nativeEvent);
@@ -125,11 +121,18 @@ export function SvEditor({ from, to, onChange, className }: SvEditorProps) {
     [onChange],
   );
 
-  return (
+  const {startRatio, endRatio, error} = svCalculate(from, to);
+
+  return <div className="flex gap-2">
     <canvas
       ref={canvasRef}
-      className={cn("w-full aspect-square cursor-pointer", className)}
+      className={cn("w-24 aspect-square cursor-pointer", className)}
       onMouseDown={onMouseDown}
     />
-  );
+    <div className="flex flex-col flex-1">
+      <div>from: {from.toFixed(2)} / to: {to.toFixed(2)}</div>
+      <div>start: {startRatio.toFixed(2)}x / end: {endRatio.toFixed(2)}x</div>
+      <div className="text-red-500">{error ? "Error! SV too powerful!" : " "}</div>
+    </div>
+  </div>;
 }

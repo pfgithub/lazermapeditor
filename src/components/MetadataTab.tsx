@@ -31,26 +31,31 @@ export function MetadataTab({ map, setMap, song, setSong }: MetadataTabProps) {
   };
 
   const handleExport = async () => {
-    if (!song) return;
+    try {
+      if (!song) return;
 
-    const sanitizeFilename = (name: string) => name.replace(/[<>:"/\\|?*]/g, "").trim() || "undefined";
+      const sanitizeFilename = (name: string) => name.replace(/[<>:"/\\|?*]/g, "").trim() || "undefined";
 
-    const artist = sanitizeFilename(map.artist);
-    const title = sanitizeFilename(map.title);
-    const creator = sanitizeFilename(map.creator);
-    const version = `[${sanitizeFilename(map.version)}]`;
-    const filename = `${artist} - ${title} (${creator}) ${version}.osz`;
+      const artist = sanitizeFilename(map.artist);
+      const title = sanitizeFilename(map.title);
+      const creator = sanitizeFilename(map.creator);
+      const version = `[${sanitizeFilename(map.version)}]`;
+      const filename = `${artist} - ${title} (${creator}) ${version}.osz`;
 
-    const blob = await exportToOszFile(map, song);
+      const blob = await exportToOszFile(map, song);
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }catch(e) {
+      alert("got error! " + (e as Error).toString());
+      console.error(e);
+    }
   };
 
   return (
