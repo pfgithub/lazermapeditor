@@ -39,8 +39,7 @@ export type Beatmap = {
 };
 
 export type Song = {
-  blobUrl: string;
-  blob: Blob,
+  bytes: Uint8Array;
   name: string;
 };
 
@@ -115,21 +114,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setSongFile: (songFile) => {
-    // Revoke old URL to prevent memory leaks
-    const oldUrl = get().song?.blobUrl;
-    if (oldUrl) {
-      URL.revokeObjectURL(oldUrl);
-    }
-
     if (songFile) {
-      set({
-        song: {
-          blobUrl: URL.createObjectURL(songFile),
-          blob: songFile,
+      songFile.arrayBuffer().then((buffer) => {
+        const newSong: Song = {
+          bytes: new Uint8Array(buffer),
           name: songFile.name,
-        },
+        };
+        set({ song: newSong });
+        saveSongFile(newSong).catch((err) => console.error("Failed to save song", err));
       });
-      saveSongFile(songFile).catch((err) => console.error("Failed to save song", err));
     } else {
       set({ song: null });
       clearSongFile().catch((err) => console.error("Failed to clear song", err));
@@ -139,7 +132,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadFromDb: async () => {
     if (get().isInitialized) return;
     try {
-      const [mapData, songFile, keybindsData] = await Promise.all([
+      const [mapData, songData, keybindsData] = await Promise.all([
         getMap<Beatmap>(),
         getSongFile(),
         getSettings<Keybinds>(),
@@ -149,9 +142,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         // Ensure all fields are present from older saved versions
         set({ map: { ...defaultMap, ...mapData } });
       }
-      if (songFile) {
-        // Use setSongFile to avoid duplicating logic and handle URL creation
-        get().setSongFile(songFile);
+      if (songData) {
+        // Handle migration from old format (File/Blob) to new format ({ bytes, name })
+        if (songData instanceof Blob) {
+          get().setSongFile(songData as File);
+        } else {
+          set({ song: songData as Song });
+        }
       }
       if (keybindsData) {
         // Migration for users with old string-based keybinds

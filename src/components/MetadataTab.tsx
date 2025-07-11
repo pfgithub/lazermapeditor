@@ -17,7 +17,7 @@ export function MetadataTab({ map, setMap, song, setSong }: MetadataTabProps) {
   const songInputRef = useRef<HTMLInputElement>(null);
 
   const handleSongChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files?.;
     if (file) {
       setSong(file);
     }

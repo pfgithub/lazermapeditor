@@ -1,3 +1,5 @@
+import type { Song } from "./store";
+
 const DB_NAME = "rhythm-editor-db";
 const DB_VERSION = 2;
 const MAP_STORE_NAME = "map";
@@ -62,23 +64,23 @@ export async function saveMap(mapData: unknown): Promise<void> {
 }
 
 // Song file persistence
-export async function getSongFile(): Promise<File | undefined> {
+export async function getSongFile(): Promise<Song | File | undefined> {
   const db = await getDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(SONG_STORE_NAME, "readonly");
     const store = transaction.objectStore(SONG_STORE_NAME);
     const request = store.get("currentSong");
-    request.onsuccess = () => resolve(request.result as File | undefined);
+    request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 }
 
-export async function saveSongFile(songFile: File): Promise<void> {
+export async function saveSongFile(song: Song): Promise<void> {
   const db = await getDB();
   return new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(SONG_STORE_NAME, "readwrite");
     const store = transaction.objectStore(SONG_STORE_NAME);
-    const request = store.put(songFile, "currentSong");
+    const request = store.put(song, "currentSong");
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
   });
