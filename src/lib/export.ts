@@ -119,7 +119,7 @@ export function exportToOsuFile(map: Beatmap, song: Song | null): string {
     finalTimingPoints.push([midTime, -100 * (1 / calc.endRatio), 0, 2, 0, 100, 0, 0]);
     finalTimingPoints.push([endTime, -100, 0, 2, 0, 100, 0, 0]);
   }
-  finalTimingPoints.sort((a, b) => a - b);
+  finalTimingPoints.sort((a, b) => a[0] - b[0]);
   for(const result of finalTimingPoints) {
     lines.push(result.join(","));
   }
@@ -226,9 +226,9 @@ export async function loadFromUnamap(file: File): Promise<LoadedProject> {
 
   const audioFile = zip.file(/\.(mp3|ogg|wav)$/i);
   let songFile: File | null = null;
-  if (audioFile) {
-    const songBytes = await audioFile.async("blob");
-    songFile = new File([songBytes], audioFile.name, { type: songBytes.type });
+  if (audioFile[0]) {
+    const songBytes = await audioFile[0].async("blob");
+    songFile = new File([songBytes], audioFile[0].name, { type: songBytes.type });
   }
 
   return { map, songFile };
